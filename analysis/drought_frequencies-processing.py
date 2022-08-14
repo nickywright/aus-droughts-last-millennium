@@ -28,6 +28,21 @@ filepath_pmip3 = '/Volumes/LaCie/CMIP5-PMIP3'
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # some options for running
+process_cesm_fullforcing_files = False
+process_all_pmip3_files = False
+calculate_cesm_ens_means = False
+calculate_giss_ens_means = False
+subset_hist_files_to_Aus_only = False
+
+# ---- set output directories etc
+historical_year = 1900
+hist_output_dir = '../files/historical_1900'
+
+# climatology for lm files
+lm_threshold_startyear = 1900
+lm_threshold_endyear = 2000
+
+lm_output_dir = '../files/lastmillennium_threshold_1900-2000'
 
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -162,7 +177,8 @@ def read_in_pmip3(modelname, var):
         attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
         dates = xr.Dataset({'time': ('time', new_times, attrs)})
         dates = xr.decode_cf(dates)
-        ds.update({'time':('time', dates['time'], attrs)})
+        # ds.update({'time':('time', dates['time'], attrs)})
+        ds['time'] = dates['time']
 
     if modelname == 'ipsl':
         ds_p1 = xr.open_dataset('%s/past1000/%s/%s_Amon_IPSL-CM5A-LR_past1000_r1i1p1_085001-185012.nc' % (filepath_pmip3, var, var), chunks={'time': 600})
@@ -175,7 +191,8 @@ def read_in_pmip3(modelname, var):
         attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
         dates = xr.Dataset({'time': ('time', new_times, attrs)})
         dates = xr.decode_cf(dates)
-        ds.update({'time':('time', dates['time'], attrs)})
+        # ds.update({'time':('time', dates['time'], attrs)})
+        ds['time'] = dates['time']
 
     if modelname == 'miroc':
         ds_p1 = xr.open_dataset('%s/past1000/%s/%s_Amon_MIROC-ESM_past1000_r1i1p1_085001-184912.nc' % (filepath_pmip3, var, var), chunks={'time': 600})
@@ -187,7 +204,8 @@ def read_in_pmip3(modelname, var):
         attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
         dates = xr.Dataset({'time': ('time', new_times, attrs)})
         dates = xr.decode_cf(dates)
-        ds.update({'time':('time', dates['time'], attrs)})
+        # ds.update({'time':('time', dates['time'], attrs)})
+        ds['time'] = dates['time']
 
     if modelname == 'mpi':
         ds_p1 = xr.open_dataset('%s/past1000/%s/%s_Amon_MPI-ESM-P_past1000_r1i1p1_085001-184912.nc' % (filepath_pmip3, var, var), chunks={'time': 600})
@@ -199,7 +217,8 @@ def read_in_pmip3(modelname, var):
         attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
         dates = xr.Dataset({'time': ('time', new_times, attrs)})
         dates = xr.decode_cf(dates)
-        ds.update({'time':('time', dates['time'], attrs)})
+        # ds.update({'time':('time', dates['time'], attrs)})
+        ds['time'] = dates['time']
 
     if modelname == 'mri':
         ds_p1 = xr.open_dataset('%s/past1000/%s/%s_Amon_MRI-CGCM3_past1000_r1i1p1_085001-185012.nc' % (filepath_pmip3, var, var), chunks={'time': 600})
@@ -209,7 +228,9 @@ def read_in_pmip3(modelname, var):
         attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}# does this make sense?
         dates = xr.Dataset({'time': ('time', newdates, attrs)})
         # dates = xr.decode_cf(dates)
-        ds_p2.update({'time':('time', dates['time'], attrs)})
+        # ds_p2.update({'time':('time', dates['time'], attrs)})
+        ds_p2['time'] = dates['time']
+
         ds_p2 = ds_p2.where(ds_p2.time >= cftime.DatetimeGregorian(1851,1,1), drop=True)
         ds = xr.concat([ds_p1, ds_p2], dim='time')
 
@@ -218,7 +239,9 @@ def read_in_pmip3(modelname, var):
         attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
         dates = xr.Dataset({'time': ('time', new_times, attrs)})
         dates = xr.decode_cf(dates)
-        ds.update({'time':('time', dates['time'], attrs)})
+        # ds.update({'time':('time', dates['time'], attrs)})
+        ds['time'] = dates['time']        
+
     return ds
 
 # apply drought metrics
@@ -646,13 +669,6 @@ def get_significance_droughts_wilcoxon(ds_model, awap):
     return ds_sig
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# set output dir etc
-historical_year = 1900
-hist_output_dir = '../files/historical_1900'
-lm_threshold_startyear = 1900
-lm_threshold_endyear = 2000
-lm_output_dir = 'files/lastmillennium_threshold_1900-2000'
-
 # Check if output directory exists, otherwise make it.
 
 if not os.path.exists(hist_output_dir):
@@ -667,378 +683,364 @@ if not os.path.exists(lm_output_dir):
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Process CESM-LME files
 
+if process_cesm_fullforcing_files is True:
+    print('Processing CESM-LME full forcing files')
+    # # # ---------------------------------
+    # print('... importing CESM-LME files')
+    ff1_precip_annual = import_cesmlme(filepath, '001')
+    ff2_precip_annual = import_cesmlme(filepath, '002')
+    ff3_precip_annual = import_cesmlme(filepath, '003')
+    ff4_precip_annual = import_cesmlme(filepath, '004')
+    ff5_precip_annual = import_cesmlme(filepath, '005')
+    ff6_precip_annual = import_cesmlme(filepath, '006')
+    ff7_precip_annual = import_cesmlme(filepath, '007')
+    ff8_precip_annual = import_cesmlme(filepath, '008')
+    ff9_precip_annual = import_cesmlme(filepath, '009')
+    ff10_precip_annual = import_cesmlme(filepath, '010')
+    ff11_precip_annual = import_cesmlme(filepath, '011')
+    ff12_precip_annual = import_cesmlme(filepath, '012')
+    ff13_precip_annual = import_cesmlme(filepath, '013')
 
-# # # ---------------------------------
-# print('... importing CESM-LME files')
-ff1_precip_annual = import_cesmlme(filepath, '001')
-ff2_precip_annual = import_cesmlme(filepath, '002')
-ff3_precip_annual = import_cesmlme(filepath, '003')
-ff4_precip_annual = import_cesmlme(filepath, '004')
-ff5_precip_annual = import_cesmlme(filepath, '005')
-ff6_precip_annual = import_cesmlme(filepath, '006')
-ff7_precip_annual = import_cesmlme(filepath, '007')
-ff8_precip_annual = import_cesmlme(filepath, '008')
-ff9_precip_annual = import_cesmlme(filepath, '009')
-ff10_precip_annual = import_cesmlme(filepath, '010')
-ff11_precip_annual = import_cesmlme(filepath, '011')
-ff12_precip_annual = import_cesmlme(filepath, '012')
-ff13_precip_annual = import_cesmlme(filepath, '013')
+    # # # # ---------------------------------
+    # # # Process CESM-MLE files for last millennium
+    # #
+    ff1_precip_hist_annual , ff1_precip_lm_annual  = process_cesm_files(ff1_precip_annual, 'ff1', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff2_precip_hist_annual , ff2_precip_lm_annual  = process_cesm_files(ff2_precip_annual, 'ff2', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff3_precip_hist_annual , ff3_precip_lm_annual  = process_cesm_files(ff3_precip_annual, 'ff3', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff4_precip_hist_annual , ff4_precip_lm_annual  = process_cesm_files(ff4_precip_annual, 'ff4', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff5_precip_hist_annual , ff5_precip_lm_annual  = process_cesm_files(ff5_precip_annual, 'ff5', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff6_precip_hist_annual , ff6_precip_lm_annual  = process_cesm_files(ff6_precip_annual, 'ff6', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff7_precip_hist_annual , ff7_precip_lm_annual  = process_cesm_files(ff7_precip_annual, 'ff7', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff8_precip_hist_annual , ff8_precip_lm_annual  = process_cesm_files(ff8_precip_annual, 'ff8', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff9_precip_hist_annual , ff9_precip_lm_annual  = process_cesm_files(ff9_precip_annual, 'ff9', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff10_precip_hist_annual, ff10_precip_lm_annual = process_cesm_files(ff10_precip_annual, 'ff10', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff11_precip_hist_annual, ff11_precip_lm_annual = process_cesm_files(ff11_precip_annual, 'ff11', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff12_precip_hist_annual, ff12_precip_lm_annual = process_cesm_files(ff12_precip_annual, 'ff12', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff13_precip_hist_annual, ff13_precip_lm_annual = process_cesm_files(ff13_precip_annual, 'ff13', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    print('... Finished processing CESM-LME full forcing files!')
+else:
+    print('Attempting to read in saved CESM-LME full forcing files...')
 
-# # # # ---------------------------------
-# # # Process CESM-MLE files for last millennium
-# #
-ff1_precip_hist_annual , ff1_precip_lm_annual  = process_cesm_files(ff1_precip_annual, 'ff1', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff2_precip_hist_annual , ff2_precip_lm_annual  = process_cesm_files(ff2_precip_annual, 'ff2', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff3_precip_hist_annual , ff3_precip_lm_annual  = process_cesm_files(ff3_precip_annual, 'ff3', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff4_precip_hist_annual , ff4_precip_lm_annual  = process_cesm_files(ff4_precip_annual, 'ff4', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff5_precip_hist_annual , ff5_precip_lm_annual  = process_cesm_files(ff5_precip_annual, 'ff5', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff6_precip_hist_annual , ff6_precip_lm_annual  = process_cesm_files(ff6_precip_annual, 'ff6', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff7_precip_hist_annual , ff7_precip_lm_annual  = process_cesm_files(ff7_precip_annual, 'ff7', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff8_precip_hist_annual , ff8_precip_lm_annual  = process_cesm_files(ff8_precip_annual, 'ff8', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff9_precip_hist_annual , ff9_precip_lm_annual  = process_cesm_files(ff9_precip_annual, 'ff9', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff10_precip_hist_annual, ff10_precip_lm_annual = process_cesm_files(ff10_precip_annual, 'ff10', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff11_precip_hist_annual, ff11_precip_lm_annual = process_cesm_files(ff11_precip_annual, 'ff11', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff12_precip_hist_annual, ff12_precip_lm_annual = process_cesm_files(ff12_precip_annual, 'ff12', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-ff13_precip_hist_annual, ff13_precip_lm_annual = process_cesm_files(ff13_precip_annual, 'ff13', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    # read in processed files
+    ff1_precip_hist_annual  = xr.open_dataset('%s/ff1_precip_hist_annual.nc' % hist_output_dir)
+    ff2_precip_hist_annual  = xr.open_dataset('%s/ff2_precip_hist_annual.nc' % hist_output_dir)
+    ff3_precip_hist_annual  = xr.open_dataset('%s/ff3_precip_hist_annual.nc' % hist_output_dir)
+    ff4_precip_hist_annual  = xr.open_dataset('%s/ff4_precip_hist_annual.nc' % hist_output_dir)
+    ff5_precip_hist_annual  = xr.open_dataset('%s/ff5_precip_hist_annual.nc' % hist_output_dir)
+    ff6_precip_hist_annual  = xr.open_dataset('%s/ff6_precip_hist_annual.nc' % hist_output_dir)
+    ff7_precip_hist_annual  = xr.open_dataset('%s/ff7_precip_hist_annual.nc' % hist_output_dir)
+    ff8_precip_hist_annual  = xr.open_dataset('%s/ff8_precip_hist_annual.nc' % hist_output_dir)
+    ff9_precip_hist_annual  = xr.open_dataset('%s/ff9_precip_hist_annual.nc' % hist_output_dir)
+    ff10_precip_hist_annual = xr.open_dataset('%s/ff10_precip_hist_annual.nc' % hist_output_dir)
+    ff11_precip_hist_annual = xr.open_dataset('%s/ff11_precip_hist_annual.nc' % hist_output_dir)
+    ff12_precip_hist_annual = xr.open_dataset('%s/ff12_precip_hist_annual.nc' % hist_output_dir)
+    ff13_precip_hist_annual = xr.open_dataset('%s/ff13_precip_hist_annual.nc' % hist_output_dir)
 
-# read in processed files
-ff1_precip_hist_annual  = xr.open_dataset('%s/ff1_precip_hist_annual.nc' % hist_output_dir)
-ff2_precip_hist_annual  = xr.open_dataset('%s/ff2_precip_hist_annual.nc' % hist_output_dir)
-ff3_precip_hist_annual  = xr.open_dataset('%s/ff3_precip_hist_annual.nc' % hist_output_dir)
-ff4_precip_hist_annual  = xr.open_dataset('%s/ff4_precip_hist_annual.nc' % hist_output_dir)
-ff5_precip_hist_annual  = xr.open_dataset('%s/ff5_precip_hist_annual.nc' % hist_output_dir)
-ff6_precip_hist_annual  = xr.open_dataset('%s/ff6_precip_hist_annual.nc' % hist_output_dir)
-ff7_precip_hist_annual  = xr.open_dataset('%s/ff7_precip_hist_annual.nc' % hist_output_dir)
-ff8_precip_hist_annual  = xr.open_dataset('%s/ff8_precip_hist_annual.nc' % hist_output_dir)
-ff9_precip_hist_annual  = xr.open_dataset('%s/ff9_precip_hist_annual.nc' % hist_output_dir)
-ff10_precip_hist_annual = xr.open_dataset('%s/ff10_precip_hist_annual.nc' % hist_output_dir)
-ff11_precip_hist_annual = xr.open_dataset('%s/ff11_precip_hist_annual.nc' % hist_output_dir)
-ff12_precip_hist_annual = xr.open_dataset('%s/ff12_precip_hist_annual.nc' % hist_output_dir)
-ff13_precip_hist_annual = xr.open_dataset('%s/ff13_precip_hist_annual.nc' % hist_output_dir)
+    # read in processed files
+    ff1_precip_lm_annual  = xr.open_dataset('%s/ff1_precip_lm_annual.nc' % lm_output_dir)
+    ff2_precip_lm_annual  = xr.open_dataset('%s/ff2_precip_lm_annual.nc' % lm_output_dir)
+    ff3_precip_lm_annual  = xr.open_dataset('%s/ff3_precip_lm_annual.nc' % lm_output_dir)
+    ff4_precip_lm_annual  = xr.open_dataset('%s/ff4_precip_lm_annual.nc' % lm_output_dir)
+    ff5_precip_lm_annual  = xr.open_dataset('%s/ff5_precip_lm_annual.nc' % lm_output_dir)
+    ff6_precip_lm_annual  = xr.open_dataset('%s/ff6_precip_lm_annual.nc' % lm_output_dir)
+    ff7_precip_lm_annual  = xr.open_dataset('%s/ff7_precip_lm_annual.nc' % lm_output_dir)
+    ff8_precip_lm_annual  = xr.open_dataset('%s/ff8_precip_lm_annual.nc' % lm_output_dir)
+    ff9_precip_lm_annual  = xr.open_dataset('%s/ff9_precip_lm_annual.nc' % lm_output_dir)
+    ff10_precip_lm_annual = xr.open_dataset('%s/ff10_precip_lm_annual.nc' % lm_output_dir)
+    ff11_precip_lm_annual = xr.open_dataset('%s/ff11_precip_lm_annual.nc' % lm_output_dir)
+    ff12_precip_lm_annual = xr.open_dataset('%s/ff12_precip_lm_annual.nc' % lm_output_dir)
+    ff13_precip_lm_annual = xr.open_dataset('%s/ff13_precip_lm_annual.nc' % lm_output_dir)
 
-# read in processed files
-ff1_precip_lm_annual  = xr.open_dataset('%s/ff1_precip_lm_annual.nc' % lm_output_dir)
-ff2_precip_lm_annual  = xr.open_dataset('%s/ff2_precip_lm_annual.nc' % lm_output_dir)
-ff3_precip_lm_annual  = xr.open_dataset('%s/ff3_precip_lm_annual.nc' % lm_output_dir)
-ff4_precip_lm_annual  = xr.open_dataset('%s/ff4_precip_lm_annual.nc' % lm_output_dir)
-ff5_precip_lm_annual  = xr.open_dataset('%s/ff5_precip_lm_annual.nc' % lm_output_dir)
-ff6_precip_lm_annual  = xr.open_dataset('%s/ff6_precip_lm_annual.nc' % lm_output_dir)
-ff7_precip_lm_annual  = xr.open_dataset('%s/ff7_precip_lm_annual.nc' % lm_output_dir)
-ff8_precip_lm_annual  = xr.open_dataset('%s/ff8_precip_lm_annual.nc' % lm_output_dir)
-ff9_precip_lm_annual  = xr.open_dataset('%s/ff9_precip_lm_annual.nc' % lm_output_dir)
-ff10_precip_lm_annual = xr.open_dataset('%s/ff10_precip_lm_annual.nc' % lm_output_dir)
-ff11_precip_lm_annual = xr.open_dataset('%s/ff11_precip_lm_annual.nc' % lm_output_dir)
-ff12_precip_lm_annual = xr.open_dataset('%s/ff12_precip_lm_annual.nc' % lm_output_dir)
-ff13_precip_lm_annual = xr.open_dataset('%s/ff13_precip_lm_annual.nc' % lm_output_dir)
 
-# %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # # Import PMIP3 files
-# print('... Importing # PMIP3 files')
-#
-# bcc_pr = read_in_pmip3('bcc', 'pr')
-# ccsm4_pr  = read_in_pmip3('ccsm4', 'pr')
-# csiro_mk3l_pr  = read_in_pmip3('csiro_mk3l', 'pr')
-# fgoals_gl_pr  = read_in_pmip3('fgoals_gl', 'pr')
-# fgoals_s2_pr  = read_in_pmip3('fgoals_s2', 'pr')
-# giss_21_pr  = read_in_pmip3('giss_21', 'pr')
-# giss_22_pr  = read_in_pmip3('giss_22', 'pr')
-# giss_23_pr  = read_in_pmip3('giss_23', 'pr')
-# giss_24_pr  = read_in_pmip3('giss_24', 'pr')
-# giss_25_pr  = read_in_pmip3('giss_25', 'pr')
-# giss_26_pr  = read_in_pmip3('giss_26', 'pr')
-# giss_27_pr  = read_in_pmip3('giss_27', 'pr')
-# giss_28_pr  = read_in_pmip3('giss_28', 'pr')
-# hadcm3_pr  = read_in_pmip3('hadcm3', 'pr')
-# ipsl_pr  = read_in_pmip3('ipsl', 'pr')
-# miroc_pr  = read_in_pmip3('miroc', 'pr')
-# mpi_pr  = read_in_pmip3('mpi', 'pr')
-# mri_pr  = read_in_pmip3('mri', 'pr')
-#
-# # fix some time issues
-# ccsm4_pr['time'] = giss_21_pr.time
-# hadcm3_pr = hadcm3_pr.resample(time='MS').mean()  # resample so we have nans were needed
-# hadcm3_pr['time'] = giss_21_pr.time
-#
-# # #
-# # # # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# # # # Process PMIP3 files
-# # # # ---------------------------------
-# # # # Process for the historical period
-# bcc_precip_hist_annual       , bcc_precip_lm_annual        = process_pmip3_files(bcc_pr, 'bcc', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# ccsm4_precip_hist_annual     , ccsm4_precip_lm_annual      = process_pmip3_files(ccsm4_pr, 'ccsm4', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# csiro_mk3l_precip_hist_annual, csiro_mk3l_precip_lm_annual = process_pmip3_files(csiro_mk3l_pr, 'csiro_mk3l',historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# fgoals_gl_precip_hist_annual , fgoals_gl_precip_lm_annual  = process_pmip3_files(fgoals_gl_pr, 'fgoals_gl', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# fgoals_s2_precip_hist_annual , fgoals_s2_precip_lm_annual  = process_pmip3_files(fgoals_s2_pr, 'fgoals_s2', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# giss_21_precip_hist_annual   , giss_21_precip_lm_annual    = process_pmip3_files(giss_21_pr, 'giss_21', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# giss_22_precip_hist_annual   , giss_22_precip_lm_annual    = process_pmip3_files(giss_22_pr, 'giss_22', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# giss_23_precip_hist_annual   , giss_23_precip_lm_annual    = process_pmip3_files(giss_23_pr, 'giss_23', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# giss_24_precip_hist_annual   , giss_24_precip_lm_annual    = process_pmip3_files(giss_24_pr, 'giss_24', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# giss_25_precip_hist_annual   , giss_25_precip_lm_annual    = process_pmip3_files(giss_25_pr, 'giss_25', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# giss_26_precip_hist_annual   , giss_26_precip_lm_annual    = process_pmip3_files(giss_26_pr, 'giss_26', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# giss_27_precip_hist_annual   , giss_27_precip_lm_annual    = process_pmip3_files(giss_27_pr, 'giss_27', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# giss_28_precip_hist_annual   , giss_28_precip_lm_annual    = process_pmip3_files(giss_28_pr, 'giss_28', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# hadcm3_precip_hist_annual    , hadcm3_precip_lm_annual     = process_pmip3_files(hadcm3_pr, 'hadcm3', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# ipsl_precip_hist_annual      , ipsl_precip_lm_annual       = process_pmip3_files(ipsl_pr, 'ipsl', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# miroc_precip_hist_annual     , miroc_precip_lm_annual      = process_pmip3_files(miroc_pr, 'miroc', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# mpi_precip_hist_annual       , mpi_precip_lm_annual        = process_pmip3_files(mpi_pr, 'mpi', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
-# mri_precip_hist_annual       , mri_precip_lm_annual        = process_pmip3_files(mri_pr, 'mri', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
 
-# read in processed files
-bcc_precip_hist_annual        = xr.open_dataset('%s/bcc_precip_hist_annual.nc' % hist_output_dir)
-ccsm4_precip_hist_annual      = xr.open_dataset('%s/ccsm4_precip_hist_annual.nc' % hist_output_dir)
-csiro_mk3l_precip_hist_annual = xr.open_dataset('%s/csiro_mk3l_precip_hist_annual.nc' % hist_output_dir)
-fgoals_gl_precip_hist_annual  = xr.open_dataset('%s/fgoals_gl_precip_hist_annual.nc' % hist_output_dir)
-fgoals_s2_precip_hist_annual  = xr.open_dataset('%s/fgoals_s2_precip_hist_annual.nc' % hist_output_dir)
-giss_21_precip_hist_annual    = xr.open_dataset('%s/giss_21_precip_hist_annual.nc' % hist_output_dir)
-giss_22_precip_hist_annual    = xr.open_dataset('%s/giss_22_precip_hist_annual.nc' % hist_output_dir)
-giss_23_precip_hist_annual    = xr.open_dataset('%s/giss_23_precip_hist_annual.nc' % hist_output_dir)
-giss_24_precip_hist_annual    = xr.open_dataset('%s/giss_24_precip_hist_annual.nc' % hist_output_dir)
-giss_25_precip_hist_annual    = xr.open_dataset('%s/giss_25_precip_hist_annual.nc' % hist_output_dir)
-giss_26_precip_hist_annual    = xr.open_dataset('%s/giss_26_precip_hist_annual.nc' % hist_output_dir)
-giss_27_precip_hist_annual    = xr.open_dataset('%s/giss_27_precip_hist_annual.nc' % hist_output_dir)
-giss_28_precip_hist_annual    = xr.open_dataset('%s/giss_28_precip_hist_annual.nc' % hist_output_dir)
-hadcm3_precip_hist_annual     = xr.open_dataset('%s/hadcm3_precip_hist_annual.nc' % hist_output_dir)
-ipsl_precip_hist_annual       = xr.open_dataset('%s/ipsl_precip_hist_annual.nc' % hist_output_dir)
-miroc_precip_hist_annual      = xr.open_dataset('%s/miroc_precip_hist_annual.nc' % hist_output_dir)
-mpi_precip_hist_annual        = xr.open_dataset('%s/mpi_precip_hist_annual.nc' % hist_output_dir)
-mri_precip_hist_annual        = xr.open_dataset('%s/mri_precip_hist_annual.nc' % hist_output_dir)
+if process_all_pmip3_files is True:
+    print('... Importing PMIP3 files')
 
-# read in processed files
-bcc_precip_lm_annual        = xr.open_dataset('%s/bcc_precip_lm_annual.nc' % lm_output_dir)
-ccsm4_precip_lm_annual      = xr.open_dataset('%s/ccsm4_precip_lm_annual.nc' % lm_output_dir)
-csiro_mk3l_precip_lm_annual = xr.open_dataset('%s/csiro_mk3l_precip_lm_annual.nc' % lm_output_dir)
-fgoals_gl_precip_lm_annual  = xr.open_dataset('%s/fgoals_gl_precip_lm_annual.nc' % lm_output_dir)
-fgoals_s2_precip_lm_annual  = xr.open_dataset('%s/fgoals_s2_precip_lm_annual.nc' % lm_output_dir)
-giss_21_precip_lm_annual    = xr.open_dataset('%s/giss_21_precip_lm_annual.nc' % lm_output_dir)
-giss_22_precip_lm_annual    = xr.open_dataset('%s/giss_22_precip_lm_annual.nc' % lm_output_dir)
-giss_23_precip_lm_annual    = xr.open_dataset('%s/giss_23_precip_lm_annual.nc' % lm_output_dir)
-giss_24_precip_lm_annual    = xr.open_dataset('%s/giss_24_precip_lm_annual.nc' % lm_output_dir)
-giss_25_precip_lm_annual    = xr.open_dataset('%s/giss_25_precip_lm_annual.nc' % lm_output_dir)
-giss_26_precip_lm_annual    = xr.open_dataset('%s/giss_26_precip_lm_annual.nc' % lm_output_dir)
-giss_27_precip_lm_annual    = xr.open_dataset('%s/giss_27_precip_lm_annual.nc' % lm_output_dir)
-giss_28_precip_lm_annual    = xr.open_dataset('%s/giss_28_precip_lm_annual.nc' % lm_output_dir)
-hadcm3_precip_lm_annual     = xr.open_dataset('%s/hadcm3_precip_lm_annual.nc'% lm_output_dir)
-ipsl_precip_lm_annual       = xr.open_dataset('%s/ipsl_precip_lm_annual.nc' % lm_output_dir)
-miroc_precip_lm_annual      = xr.open_dataset('%s/miroc_precip_lm_annual.nc' % lm_output_dir)
-mpi_precip_lm_annual        = xr.open_dataset('%s/mpi_precip_lm_annual.nc' % lm_output_dir)
-mri_precip_lm_annual        = xr.open_dataset('%s/mri_precip_lm_annual.nc' % lm_output_dir)
+    bcc_pr = read_in_pmip3('bcc', 'pr')
+    ccsm4_pr  = read_in_pmip3('ccsm4', 'pr')
+    csiro_mk3l_pr  = read_in_pmip3('csiro_mk3l', 'pr')
+    fgoals_gl_pr  = read_in_pmip3('fgoals_gl', 'pr')
+    fgoals_s2_pr  = read_in_pmip3('fgoals_s2', 'pr')
+    giss_21_pr  = read_in_pmip3('giss_21', 'pr')
+    giss_22_pr  = read_in_pmip3('giss_22', 'pr')
+    giss_23_pr  = read_in_pmip3('giss_23', 'pr')
+    giss_24_pr  = read_in_pmip3('giss_24', 'pr')
+    giss_25_pr  = read_in_pmip3('giss_25', 'pr')
+    giss_26_pr  = read_in_pmip3('giss_26', 'pr')
+    giss_27_pr  = read_in_pmip3('giss_27', 'pr')
+    giss_28_pr  = read_in_pmip3('giss_28', 'pr')
+    hadcm3_pr  = read_in_pmip3('hadcm3', 'pr')
+    ipsl_pr  = read_in_pmip3('ipsl', 'pr')
+    miroc_pr  = read_in_pmip3('miroc', 'pr')
+    mpi_pr  = read_in_pmip3('mpi', 'pr')
+    mri_pr  = read_in_pmip3('mri', 'pr')
+
+    # fix some time issues
+    ccsm4_pr['time'] = giss_21_pr.time
+    hadcm3_pr = hadcm3_pr.resample(time='MS').mean()  # resample so we have nans were needed
+    hadcm3_pr['time'] = giss_21_pr.time
+
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # # # Process PMIP3 files
+    # # # ---------------------------------
+    # # # Process for the historical period
+    bcc_precip_hist_annual       , bcc_precip_lm_annual        = process_pmip3_files(bcc_pr, 'bcc', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ccsm4_precip_hist_annual     , ccsm4_precip_lm_annual      = process_pmip3_files(ccsm4_pr, 'ccsm4', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    csiro_mk3l_precip_hist_annual, csiro_mk3l_precip_lm_annual = process_pmip3_files(csiro_mk3l_pr, 'csiro_mk3l',historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    fgoals_gl_precip_hist_annual , fgoals_gl_precip_lm_annual  = process_pmip3_files(fgoals_gl_pr, 'fgoals_gl', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    fgoals_s2_precip_hist_annual , fgoals_s2_precip_lm_annual  = process_pmip3_files(fgoals_s2_pr, 'fgoals_s2', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    giss_21_precip_hist_annual   , giss_21_precip_lm_annual    = process_pmip3_files(giss_21_pr, 'giss_21', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    giss_22_precip_hist_annual   , giss_22_precip_lm_annual    = process_pmip3_files(giss_22_pr, 'giss_22', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    giss_23_precip_hist_annual   , giss_23_precip_lm_annual    = process_pmip3_files(giss_23_pr, 'giss_23', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    giss_24_precip_hist_annual   , giss_24_precip_lm_annual    = process_pmip3_files(giss_24_pr, 'giss_24', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    giss_25_precip_hist_annual   , giss_25_precip_lm_annual    = process_pmip3_files(giss_25_pr, 'giss_25', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    giss_26_precip_hist_annual   , giss_26_precip_lm_annual    = process_pmip3_files(giss_26_pr, 'giss_26', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    giss_27_precip_hist_annual   , giss_27_precip_lm_annual    = process_pmip3_files(giss_27_pr, 'giss_27', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    giss_28_precip_hist_annual   , giss_28_precip_lm_annual    = process_pmip3_files(giss_28_pr, 'giss_28', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    hadcm3_precip_hist_annual    , hadcm3_precip_lm_annual     = process_pmip3_files(hadcm3_pr, 'hadcm3', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ipsl_precip_hist_annual      , ipsl_precip_lm_annual       = process_pmip3_files(ipsl_pr, 'ipsl', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    miroc_precip_hist_annual     , miroc_precip_lm_annual      = process_pmip3_files(miroc_pr, 'miroc', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    mpi_precip_hist_annual       , mpi_precip_lm_annual        = process_pmip3_files(mpi_pr, 'mpi', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    mri_precip_hist_annual       , mri_precip_lm_annual        = process_pmip3_files(mri_pr, 'mri', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+
+    print('... Finished processing PMIP3 files!')
+
+else:
+    print('Attempting to read in saved PMIP3 files...')
+    # read in processed files
+    bcc_precip_hist_annual        = xr.open_dataset('%s/bcc_precip_hist_annual.nc' % hist_output_dir)
+    ccsm4_precip_hist_annual      = xr.open_dataset('%s/ccsm4_precip_hist_annual.nc' % hist_output_dir)
+    csiro_mk3l_precip_hist_annual = xr.open_dataset('%s/csiro_mk3l_precip_hist_annual.nc' % hist_output_dir)
+    fgoals_gl_precip_hist_annual  = xr.open_dataset('%s/fgoals_gl_precip_hist_annual.nc' % hist_output_dir)
+    fgoals_s2_precip_hist_annual  = xr.open_dataset('%s/fgoals_s2_precip_hist_annual.nc' % hist_output_dir)
+    giss_21_precip_hist_annual    = xr.open_dataset('%s/giss_21_precip_hist_annual.nc' % hist_output_dir)
+    giss_22_precip_hist_annual    = xr.open_dataset('%s/giss_22_precip_hist_annual.nc' % hist_output_dir)
+    giss_23_precip_hist_annual    = xr.open_dataset('%s/giss_23_precip_hist_annual.nc' % hist_output_dir)
+    giss_24_precip_hist_annual    = xr.open_dataset('%s/giss_24_precip_hist_annual.nc' % hist_output_dir)
+    giss_25_precip_hist_annual    = xr.open_dataset('%s/giss_25_precip_hist_annual.nc' % hist_output_dir)
+    giss_26_precip_hist_annual    = xr.open_dataset('%s/giss_26_precip_hist_annual.nc' % hist_output_dir)
+    giss_27_precip_hist_annual    = xr.open_dataset('%s/giss_27_precip_hist_annual.nc' % hist_output_dir)
+    giss_28_precip_hist_annual    = xr.open_dataset('%s/giss_28_precip_hist_annual.nc' % hist_output_dir)
+    hadcm3_precip_hist_annual     = xr.open_dataset('%s/hadcm3_precip_hist_annual.nc' % hist_output_dir)
+    ipsl_precip_hist_annual       = xr.open_dataset('%s/ipsl_precip_hist_annual.nc' % hist_output_dir)
+    miroc_precip_hist_annual      = xr.open_dataset('%s/miroc_precip_hist_annual.nc' % hist_output_dir)
+    mpi_precip_hist_annual        = xr.open_dataset('%s/mpi_precip_hist_annual.nc' % hist_output_dir)
+    mri_precip_hist_annual        = xr.open_dataset('%s/mri_precip_hist_annual.nc' % hist_output_dir)
+
+    # read in processed files
+    bcc_precip_lm_annual        = xr.open_dataset('%s/bcc_precip_lm_annual.nc' % lm_output_dir)
+    ccsm4_precip_lm_annual      = xr.open_dataset('%s/ccsm4_precip_lm_annual.nc' % lm_output_dir)
+    csiro_mk3l_precip_lm_annual = xr.open_dataset('%s/csiro_mk3l_precip_lm_annual.nc' % lm_output_dir)
+    fgoals_gl_precip_lm_annual  = xr.open_dataset('%s/fgoals_gl_precip_lm_annual.nc' % lm_output_dir)
+    fgoals_s2_precip_lm_annual  = xr.open_dataset('%s/fgoals_s2_precip_lm_annual.nc' % lm_output_dir)
+    giss_21_precip_lm_annual    = xr.open_dataset('%s/giss_21_precip_lm_annual.nc' % lm_output_dir)
+    giss_22_precip_lm_annual    = xr.open_dataset('%s/giss_22_precip_lm_annual.nc' % lm_output_dir)
+    giss_23_precip_lm_annual    = xr.open_dataset('%s/giss_23_precip_lm_annual.nc' % lm_output_dir)
+    giss_24_precip_lm_annual    = xr.open_dataset('%s/giss_24_precip_lm_annual.nc' % lm_output_dir)
+    giss_25_precip_lm_annual    = xr.open_dataset('%s/giss_25_precip_lm_annual.nc' % lm_output_dir)
+    giss_26_precip_lm_annual    = xr.open_dataset('%s/giss_26_precip_lm_annual.nc' % lm_output_dir)
+    giss_27_precip_lm_annual    = xr.open_dataset('%s/giss_27_precip_lm_annual.nc' % lm_output_dir)
+    giss_28_precip_lm_annual    = xr.open_dataset('%s/giss_28_precip_lm_annual.nc' % lm_output_dir)
+    hadcm3_precip_lm_annual     = xr.open_dataset('%s/hadcm3_precip_lm_annual.nc'% lm_output_dir)
+    ipsl_precip_lm_annual       = xr.open_dataset('%s/ipsl_precip_lm_annual.nc' % lm_output_dir)
+    miroc_precip_lm_annual      = xr.open_dataset('%s/miroc_precip_lm_annual.nc' % lm_output_dir)
+    mpi_precip_lm_annual        = xr.open_dataset('%s/mpi_precip_lm_annual.nc' % lm_output_dir)
+    mri_precip_lm_annual        = xr.open_dataset('%s/mri_precip_lm_annual.nc' % lm_output_dir)
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # ------ Calculate ensemble means
+if calculate_cesm_ens_means is True:
+    print('Calculating CESM-LME full forcing ensemble mean')
+    # --- historical
+    ff_all_precip_hist_annual = xr.concat([ff1_precip_hist_annual, ff2_precip_hist_annual, ff3_precip_hist_annual, ff4_precip_hist_annual,
+        ff5_precip_hist_annual, ff6_precip_hist_annual, ff7_precip_hist_annual, ff8_precip_hist_annual, ff9_precip_hist_annual,
+        ff10_precip_hist_annual, ff11_precip_hist_annual, ff12_precip_hist_annual, ff13_precip_hist_annual], dim='en')
+    save_netcdf_compression(ff_all_precip_hist_annual, hist_output_dir, 'ff_all_precip_hist_annual')
 
-# --- historical
-ff_all_precip_hist_annual = xr.concat([ff1_precip_hist_annual, ff2_precip_hist_annual, ff3_precip_hist_annual, ff4_precip_hist_annual,
-    ff5_precip_hist_annual, ff6_precip_hist_annual, ff7_precip_hist_annual, ff8_precip_hist_annual, ff9_precip_hist_annual,
-    ff10_precip_hist_annual, ff11_precip_hist_annual, ff12_precip_hist_annual, ff13_precip_hist_annual], dim='en')
+    # --- last millennium
+    ff_all_precip_lm_annual = xr.concat([ff1_precip_lm_annual, ff2_precip_lm_annual, ff3_precip_lm_annual, ff4_precip_lm_annual,
+        ff5_precip_lm_annual, ff6_precip_lm_annual, ff7_precip_lm_annual, ff8_precip_lm_annual, ff9_precip_lm_annual,
+        ff10_precip_lm_annual, ff11_precip_lm_annual, ff12_precip_lm_annual, ff13_precip_lm_annual], dim='en')
+    save_netcdf_compression(ff_all_precip_lm_annual, lm_output_dir, 'ff_all_precip_lm_annual')
+else:
+    pass
 
-giss_all_precip_hist_annual = xr.concat([giss_21_precip_hist_annual, giss_22_precip_hist_annual, giss_23_precip_hist_annual,
-    giss_24_precip_hist_annual, giss_25_precip_hist_annual, giss_26_precip_hist_annual, giss_27_precip_hist_annual,
-    giss_28_precip_hist_annual], dim='en')
+if calculate_giss_ens_means is True:
+    print('Calculating GISS ensemble mean')
+    giss_all_precip_hist_annual = xr.concat([giss_21_precip_hist_annual, giss_22_precip_hist_annual, giss_23_precip_hist_annual,
+        giss_24_precip_hist_annual, giss_25_precip_hist_annual, giss_26_precip_hist_annual, giss_27_precip_hist_annual,
+        giss_28_precip_hist_annual], dim='en')
+    save_netcdf_compression(giss_all_precip_hist_annual, hist_output_dir, 'giss_all_precip_hist_annual')
 
-# --- last millennium
-ff_all_precip_lm_annual = xr.concat([ff1_precip_lm_annual, ff2_precip_lm_annual, ff3_precip_lm_annual, ff4_precip_lm_annual,
-    ff5_precip_lm_annual, ff6_precip_lm_annual, ff7_precip_lm_annual, ff8_precip_lm_annual, ff9_precip_lm_annual,
-    ff10_precip_lm_annual, ff11_precip_lm_annual, ff12_precip_lm_annual, ff13_precip_lm_annual], dim='en')
-
-giss_all_precip_lm_annual = xr.concat([giss_21_precip_lm_annual, giss_22_precip_lm_annual, giss_23_precip_lm_annual,
-    giss_24_precip_lm_annual, giss_25_precip_lm_annual, giss_26_precip_lm_annual, giss_27_precip_lm_annual, giss_28_precip_lm_annual], dim='en')
-
-save_netcdf_compression(ff_all_precip_hist_annual, hist_output_dir, 'ff_all_precip_hist_annual')
-save_netcdf_compression(giss_all_precip_hist_annual, hist_output_dir, 'giss_all_precip_hist_annual')
-
-save_netcdf_compression(ff_all_precip_lm_annual, lm_output_dir, 'ff_all_precip_lm_annual')
-save_netcdf_compression(giss_all_precip_lm_annual, lm_output_dir, 'giss_all_precip_lm_annual')
-
+    giss_all_precip_lm_annual = xr.concat([giss_21_precip_lm_annual, giss_22_precip_lm_annual, giss_23_precip_lm_annual,
+        giss_24_precip_lm_annual, giss_25_precip_lm_annual, giss_26_precip_lm_annual, giss_27_precip_lm_annual, giss_28_precip_lm_annual], dim='en')
+    save_netcdf_compression(giss_all_precip_lm_annual, lm_output_dir, 'giss_all_precip_lm_annual')
+else:
+    pass
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Subset to Australia - historical
-print('... subset to Aus only')
-# --- cesm-lme
-ff1_precip_hist_annual_aus = get_aus(ff1_precip_hist_annual)
-ff2_precip_hist_annual_aus = get_aus(ff2_precip_hist_annual)
-ff3_precip_hist_annual_aus = get_aus(ff3_precip_hist_annual)
-ff4_precip_hist_annual_aus = get_aus(ff4_precip_hist_annual)
-ff5_precip_hist_annual_aus = get_aus(ff5_precip_hist_annual)
-ff6_precip_hist_annual_aus = get_aus(ff6_precip_hist_annual)
-ff7_precip_hist_annual_aus = get_aus(ff7_precip_hist_annual)
-ff8_precip_hist_annual_aus = get_aus(ff8_precip_hist_annual)
-ff9_precip_hist_annual_aus = get_aus(ff9_precip_hist_annual)
-ff10_precip_hist_annual_aus = get_aus(ff10_precip_hist_annual)
-ff11_precip_hist_annual_aus = get_aus(ff11_precip_hist_annual)
-ff12_precip_hist_annual_aus = get_aus(ff12_precip_hist_annual)
-ff13_precip_hist_annual_aus = get_aus(ff13_precip_hist_annual)
+if subset_hist_files_to_Aus_only is True:
+    print('... subset historical files to Aus only')
+    # --- cesm-lme
+    ff1_precip_hist_annual_aus = get_aus(ff1_precip_hist_annual)
+    ff2_precip_hist_annual_aus = get_aus(ff2_precip_hist_annual)
+    ff3_precip_hist_annual_aus = get_aus(ff3_precip_hist_annual)
+    ff4_precip_hist_annual_aus = get_aus(ff4_precip_hist_annual)
+    ff5_precip_hist_annual_aus = get_aus(ff5_precip_hist_annual)
+    ff6_precip_hist_annual_aus = get_aus(ff6_precip_hist_annual)
+    ff7_precip_hist_annual_aus = get_aus(ff7_precip_hist_annual)
+    ff8_precip_hist_annual_aus = get_aus(ff8_precip_hist_annual)
+    ff9_precip_hist_annual_aus = get_aus(ff9_precip_hist_annual)
+    ff10_precip_hist_annual_aus = get_aus(ff10_precip_hist_annual)
+    ff11_precip_hist_annual_aus = get_aus(ff11_precip_hist_annual)
+    ff12_precip_hist_annual_aus = get_aus(ff12_precip_hist_annual)
+    ff13_precip_hist_annual_aus = get_aus(ff13_precip_hist_annual)
 
-# --- pmip3
-bcc_precip_hist_annual_aus = get_aus(bcc_precip_hist_annual)
-ccsm4_precip_hist_annual_aus = get_aus(ccsm4_precip_hist_annual)
-csiro_mk3l_precip_hist_annual_aus = get_aus(csiro_mk3l_precip_hist_annual)
-fgoals_gl_precip_hist_annual_aus = get_aus(fgoals_gl_precip_hist_annual)
-fgoals_s2_precip_hist_annual_aus = get_aus(fgoals_s2_precip_hist_annual)
-giss_21_precip_hist_annual_aus = get_aus(giss_21_precip_hist_annual)
-giss_22_precip_hist_annual_aus = get_aus(giss_22_precip_hist_annual)
-giss_23_precip_hist_annual_aus = get_aus(giss_23_precip_hist_annual)
-giss_24_precip_hist_annual_aus = get_aus(giss_24_precip_hist_annual)
-giss_25_precip_hist_annual_aus = get_aus(giss_25_precip_hist_annual)
-giss_26_precip_hist_annual_aus = get_aus(giss_26_precip_hist_annual)
-giss_27_precip_hist_annual_aus = get_aus(giss_27_precip_hist_annual)
-giss_28_precip_hist_annual_aus = get_aus(giss_28_precip_hist_annual)
-hadcm3_precip_hist_annual_aus = get_aus(hadcm3_precip_hist_annual)
-ipsl_precip_hist_annual_aus = get_aus(ipsl_precip_hist_annual)
-miroc_precip_hist_annual_aus = get_aus(miroc_precip_hist_annual)
-mpi_precip_hist_annual_aus = get_aus(mpi_precip_hist_annual)
-mri_precip_hist_annual_aus = get_aus(mri_precip_hist_annual)
+    # --- pmip3
+    bcc_precip_hist_annual_aus = get_aus(bcc_precip_hist_annual)
+    ccsm4_precip_hist_annual_aus = get_aus(ccsm4_precip_hist_annual)
+    csiro_mk3l_precip_hist_annual_aus = get_aus(csiro_mk3l_precip_hist_annual)
+    fgoals_gl_precip_hist_annual_aus = get_aus(fgoals_gl_precip_hist_annual)
+    fgoals_s2_precip_hist_annual_aus = get_aus(fgoals_s2_precip_hist_annual)
+    giss_21_precip_hist_annual_aus = get_aus(giss_21_precip_hist_annual)
+    giss_22_precip_hist_annual_aus = get_aus(giss_22_precip_hist_annual)
+    giss_23_precip_hist_annual_aus = get_aus(giss_23_precip_hist_annual)
+    giss_24_precip_hist_annual_aus = get_aus(giss_24_precip_hist_annual)
+    giss_25_precip_hist_annual_aus = get_aus(giss_25_precip_hist_annual)
+    giss_26_precip_hist_annual_aus = get_aus(giss_26_precip_hist_annual)
+    giss_27_precip_hist_annual_aus = get_aus(giss_27_precip_hist_annual)
+    giss_28_precip_hist_annual_aus = get_aus(giss_28_precip_hist_annual)
+    hadcm3_precip_hist_annual_aus = get_aus(hadcm3_precip_hist_annual)
+    ipsl_precip_hist_annual_aus = get_aus(ipsl_precip_hist_annual)
+    miroc_precip_hist_annual_aus = get_aus(miroc_precip_hist_annual)
+    mpi_precip_hist_annual_aus = get_aus(mpi_precip_hist_annual)
+    mri_precip_hist_annual_aus = get_aus(mri_precip_hist_annual)
 
-ff_all_precip_hist_annual_aus = get_aus(ff_all_precip_hist_annual)
-giss_all_precip_hist_annual_aus = get_aus(giss_all_precip_hist_annual)
+    ff_all_precip_hist_annual_aus = get_aus(ff_all_precip_hist_annual)
+    giss_all_precip_hist_annual_aus = get_aus(giss_all_precip_hist_annual)
 
 
-# --- Save output
-save_netcdf_compression(ff1_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '1')
-save_netcdf_compression(ff2_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '2')
-save_netcdf_compression(ff3_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '3')
-save_netcdf_compression(ff4_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '4')
-save_netcdf_compression(ff5_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '5')
-save_netcdf_compression(ff6_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '6')
-save_netcdf_compression(ff7_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '7')
-save_netcdf_compression(ff8_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '8')
-save_netcdf_compression(ff9_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '9')
-save_netcdf_compression(ff10_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '10')
-save_netcdf_compression(ff11_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '11')
-save_netcdf_compression(ff12_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '12')
-save_netcdf_compression(ff13_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '13')
+    # --- Save output
+    save_netcdf_compression(ff1_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '1')
+    save_netcdf_compression(ff2_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '2')
+    save_netcdf_compression(ff3_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '3')
+    save_netcdf_compression(ff4_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '4')
+    save_netcdf_compression(ff5_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '5')
+    save_netcdf_compression(ff6_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '6')
+    save_netcdf_compression(ff7_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '7')
+    save_netcdf_compression(ff8_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '8')
+    save_netcdf_compression(ff9_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '9')
+    save_netcdf_compression(ff10_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '10')
+    save_netcdf_compression(ff11_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '11')
+    save_netcdf_compression(ff12_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '12')
+    save_netcdf_compression(ff13_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '13')
 
-save_netcdf_compression(bcc_precip_hist_annual_aus, hist_output_dir, 'bcc_precip_hist_annual_aus')
-save_netcdf_compression(ccsm4_precip_hist_annual_aus, hist_output_dir, 'ccsm4_precip_hist_annual_aus')
-save_netcdf_compression(csiro_mk3l_precip_hist_annual_aus, hist_output_dir, 'csiro_mk3l_precip_hist_annual_aus')
-save_netcdf_compression(fgoals_gl_precip_hist_annual_aus, hist_output_dir, 'fgoals_gl_precip_hist_annual_aus')
-save_netcdf_compression(fgoals_s2_precip_hist_annual_aus, hist_output_dir, 'fgoals_s2_precip_hist_annual_aus')
-save_netcdf_compression(giss_21_precip_hist_annual_aus, hist_output_dir, 'giss_21_precip_hist_annual_aus')
-save_netcdf_compression(giss_22_precip_hist_annual_aus, hist_output_dir, 'giss_22_precip_hist_annual_aus')
-save_netcdf_compression(giss_23_precip_hist_annual_aus, hist_output_dir, 'giss_23_precip_hist_annual_aus')
-save_netcdf_compression(giss_24_precip_hist_annual_aus, hist_output_dir, 'giss_24_precip_hist_annual_aus')
-save_netcdf_compression(giss_25_precip_hist_annual_aus, hist_output_dir, 'giss_25_precip_hist_annual_aus')
-save_netcdf_compression(giss_26_precip_hist_annual_aus, hist_output_dir, 'giss_26_precip_hist_annual_aus')
-save_netcdf_compression(giss_27_precip_hist_annual_aus, hist_output_dir, 'giss_27_precip_hist_annual_aus')
-save_netcdf_compression(giss_28_precip_hist_annual_aus, hist_output_dir, 'giss_28_precip_hist_annual_aus')
-save_netcdf_compression(hadcm3_precip_hist_annual_aus, hist_output_dir, 'hadcm3_precip_hist_annual_aus')
-save_netcdf_compression(ipsl_precip_hist_annual_aus, hist_output_dir, 'ipsl_precip_hist_annual_aus')
-save_netcdf_compression(miroc_precip_hist_annual_aus, hist_output_dir, 'miroc_precip_hist_annual_aus')
-save_netcdf_compression(mpi_precip_hist_annual_aus, hist_output_dir, 'mpi_precip_hist_annual_aus')
-save_netcdf_compression(mri_precip_hist_annual_aus, hist_output_dir, 'mri_precip_hist_annual_aus')
+    save_netcdf_compression(bcc_precip_hist_annual_aus, hist_output_dir, 'bcc_precip_hist_annual_aus')
+    save_netcdf_compression(ccsm4_precip_hist_annual_aus, hist_output_dir, 'ccsm4_precip_hist_annual_aus')
+    save_netcdf_compression(csiro_mk3l_precip_hist_annual_aus, hist_output_dir, 'csiro_mk3l_precip_hist_annual_aus')
+    save_netcdf_compression(fgoals_gl_precip_hist_annual_aus, hist_output_dir, 'fgoals_gl_precip_hist_annual_aus')
+    save_netcdf_compression(fgoals_s2_precip_hist_annual_aus, hist_output_dir, 'fgoals_s2_precip_hist_annual_aus')
+    save_netcdf_compression(giss_21_precip_hist_annual_aus, hist_output_dir, 'giss_21_precip_hist_annual_aus')
+    save_netcdf_compression(giss_22_precip_hist_annual_aus, hist_output_dir, 'giss_22_precip_hist_annual_aus')
+    save_netcdf_compression(giss_23_precip_hist_annual_aus, hist_output_dir, 'giss_23_precip_hist_annual_aus')
+    save_netcdf_compression(giss_24_precip_hist_annual_aus, hist_output_dir, 'giss_24_precip_hist_annual_aus')
+    save_netcdf_compression(giss_25_precip_hist_annual_aus, hist_output_dir, 'giss_25_precip_hist_annual_aus')
+    save_netcdf_compression(giss_26_precip_hist_annual_aus, hist_output_dir, 'giss_26_precip_hist_annual_aus')
+    save_netcdf_compression(giss_27_precip_hist_annual_aus, hist_output_dir, 'giss_27_precip_hist_annual_aus')
+    save_netcdf_compression(giss_28_precip_hist_annual_aus, hist_output_dir, 'giss_28_precip_hist_annual_aus')
+    save_netcdf_compression(hadcm3_precip_hist_annual_aus, hist_output_dir, 'hadcm3_precip_hist_annual_aus')
+    save_netcdf_compression(ipsl_precip_hist_annual_aus, hist_output_dir, 'ipsl_precip_hist_annual_aus')
+    save_netcdf_compression(miroc_precip_hist_annual_aus, hist_output_dir, 'miroc_precip_hist_annual_aus')
+    save_netcdf_compression(mpi_precip_hist_annual_aus, hist_output_dir, 'mpi_precip_hist_annual_aus')
+    save_netcdf_compression(mri_precip_hist_annual_aus, hist_output_dir, 'mri_precip_hist_annual_aus')
 
-save_netcdf_compression(ff_all_precip_hist_annual_aus, hist_output_dir, 'ff_all_precip_hist_annual_aus')
-save_netcdf_compression(giss_all_precip_hist_annual_aus, hist_output_dir, 'giss_all_precip_hist_annual_aus')
+    save_netcdf_compression(ff_all_precip_hist_annual_aus, hist_output_dir, 'ff_all_precip_hist_annual_aus')
+    save_netcdf_compression(giss_all_precip_hist_annual_aus, hist_output_dir, 'giss_all_precip_hist_annual_aus')
+
+else:
+    pass
 
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Subset to Australia - last millennium
-ff1_precip_lm_annual_aus  = get_aus(ff1_precip_lm_annual)
-ff2_precip_lm_annual_aus  = get_aus(ff2_precip_lm_annual)
-ff3_precip_lm_annual_aus  = get_aus(ff3_precip_lm_annual)
-ff4_precip_lm_annual_aus  = get_aus(ff4_precip_lm_annual)
-ff5_precip_lm_annual_aus  = get_aus(ff5_precip_lm_annual)
-ff6_precip_lm_annual_aus  = get_aus(ff6_precip_lm_annual)
-ff7_precip_lm_annual_aus  = get_aus(ff7_precip_lm_annual)
-ff8_precip_lm_annual_aus  = get_aus(ff8_precip_lm_annual)
-ff9_precip_lm_annual_aus  = get_aus(ff9_precip_lm_annual)
-ff10_precip_lm_annual_aus = get_aus(ff10_precip_lm_annual)
-ff11_precip_lm_annual_aus = get_aus(ff11_precip_lm_annual)
-ff12_precip_lm_annual_aus = get_aus(ff12_precip_lm_annual)
-ff13_precip_lm_annual_aus = get_aus(ff13_precip_lm_annual)
+if subset_lm_files_to_Aus_only is True:
+    print('... subset last millennium files to Aus only')
+    ff1_precip_lm_annual_aus  = get_aus(ff1_precip_lm_annual)
+    ff2_precip_lm_annual_aus  = get_aus(ff2_precip_lm_annual)
+    ff3_precip_lm_annual_aus  = get_aus(ff3_precip_lm_annual)
+    ff4_precip_lm_annual_aus  = get_aus(ff4_precip_lm_annual)
+    ff5_precip_lm_annual_aus  = get_aus(ff5_precip_lm_annual)
+    ff6_precip_lm_annual_aus  = get_aus(ff6_precip_lm_annual)
+    ff7_precip_lm_annual_aus  = get_aus(ff7_precip_lm_annual)
+    ff8_precip_lm_annual_aus  = get_aus(ff8_precip_lm_annual)
+    ff9_precip_lm_annual_aus  = get_aus(ff9_precip_lm_annual)
+    ff10_precip_lm_annual_aus = get_aus(ff10_precip_lm_annual)
+    ff11_precip_lm_annual_aus = get_aus(ff11_precip_lm_annual)
+    ff12_precip_lm_annual_aus = get_aus(ff12_precip_lm_annual)
+    ff13_precip_lm_annual_aus = get_aus(ff13_precip_lm_annual)
 
-bcc_precip_lm_annual_aus = get_aus(bcc_precip_lm_annual )
-ccsm4_precip_lm_annual_aus = get_aus(ccsm4_precip_lm_annual)
-csiro_mk3l_precip_lm_annual_aus = get_aus(csiro_mk3l_precip_lm_annual)
-fgoals_gl_precip_lm_annual_aus = get_aus(fgoals_gl_precip_lm_annual)
-fgoals_s2_precip_lm_annual_aus = get_aus(fgoals_s2_precip_lm_annual)
-giss_21_precip_lm_annual_aus = get_aus(giss_21_precip_lm_annual)
-giss_22_precip_lm_annual_aus = get_aus(giss_22_precip_lm_annual)
-giss_23_precip_lm_annual_aus = get_aus(giss_23_precip_lm_annual)
-giss_24_precip_lm_annual_aus = get_aus(giss_24_precip_lm_annual)
-giss_25_precip_lm_annual_aus = get_aus(giss_25_precip_lm_annual)
-giss_26_precip_lm_annual_aus = get_aus(giss_26_precip_lm_annual)
-giss_27_precip_lm_annual_aus = get_aus(giss_27_precip_lm_annual)
-giss_28_precip_lm_annual_aus = get_aus(giss_28_precip_lm_annual)
-hadcm3_precip_lm_annual_aus = get_aus(hadcm3_precip_lm_annual)
-ipsl_precip_lm_annual_aus = get_aus(ipsl_precip_lm_annual)
-miroc_precip_lm_annual_aus = get_aus(miroc_precip_lm_annual)
-mpi_precip_lm_annual_aus = get_aus(mpi_precip_lm_annual)
-mri_precip_lm_annual_aus = get_aus(mri_precip_lm_annual)
+    bcc_precip_lm_annual_aus = get_aus(bcc_precip_lm_annual )
+    ccsm4_precip_lm_annual_aus = get_aus(ccsm4_precip_lm_annual)
+    csiro_mk3l_precip_lm_annual_aus = get_aus(csiro_mk3l_precip_lm_annual)
+    fgoals_gl_precip_lm_annual_aus = get_aus(fgoals_gl_precip_lm_annual)
+    fgoals_s2_precip_lm_annual_aus = get_aus(fgoals_s2_precip_lm_annual)
+    giss_21_precip_lm_annual_aus = get_aus(giss_21_precip_lm_annual)
+    giss_22_precip_lm_annual_aus = get_aus(giss_22_precip_lm_annual)
+    giss_23_precip_lm_annual_aus = get_aus(giss_23_precip_lm_annual)
+    giss_24_precip_lm_annual_aus = get_aus(giss_24_precip_lm_annual)
+    giss_25_precip_lm_annual_aus = get_aus(giss_25_precip_lm_annual)
+    giss_26_precip_lm_annual_aus = get_aus(giss_26_precip_lm_annual)
+    giss_27_precip_lm_annual_aus = get_aus(giss_27_precip_lm_annual)
+    giss_28_precip_lm_annual_aus = get_aus(giss_28_precip_lm_annual)
+    hadcm3_precip_lm_annual_aus = get_aus(hadcm3_precip_lm_annual)
+    ipsl_precip_lm_annual_aus = get_aus(ipsl_precip_lm_annual)
+    miroc_precip_lm_annual_aus = get_aus(miroc_precip_lm_annual)
+    mpi_precip_lm_annual_aus = get_aus(mpi_precip_lm_annual)
+    mri_precip_lm_annual_aus = get_aus(mri_precip_lm_annual)
 
-ff_all_precip_lm_annual_aus = get_aus(ff_all_precip_lm_annual)
-giss_all_precip_lm_annual_aus = get_aus(giss_all_precip_lm_annual)
-
-
-# --- Save output
-save_netcdf_compression(ff1_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '1')
-save_netcdf_compression(ff2_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '2')
-save_netcdf_compression(ff3_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '3')
-save_netcdf_compression(ff4_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '4')
-save_netcdf_compression(ff5_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '5')
-save_netcdf_compression(ff6_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '6')
-save_netcdf_compression(ff7_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '7')
-save_netcdf_compression(ff8_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '8')
-save_netcdf_compression(ff9_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '9')
-save_netcdf_compression(ff10_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '10')
-save_netcdf_compression(ff11_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '11')
-save_netcdf_compression(ff12_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '12')
-save_netcdf_compression(ff13_precip_hist_annual_aus, hist_output_dir, 'ff%s_precip_hist_annual_aus' % '13')
-
-save_netcdf_compression(bcc_precip_hist_annual_aus, hist_output_dir, 'bcc_precip_hist_annual_aus')
-save_netcdf_compression(ccsm4_precip_hist_annual_aus, hist_output_dir, 'ccsm4_precip_hist_annual_aus')
-save_netcdf_compression(csiro_mk3l_precip_hist_annual_aus, hist_output_dir, 'csiro_mk3l_precip_hist_annual_aus')
-save_netcdf_compression(fgoals_gl_precip_hist_annual_aus, hist_output_dir, 'fgoals_gl_precip_hist_annual_aus')
-save_netcdf_compression(fgoals_s2_precip_hist_annual_aus, hist_output_dir, 'fgoals_s2_precip_hist_annual_aus')
-save_netcdf_compression(giss_21_precip_hist_annual_aus, hist_output_dir, 'giss_21_precip_hist_annual_aus')
-save_netcdf_compression(giss_22_precip_hist_annual_aus, hist_output_dir, 'giss_22_precip_hist_annual_aus')
-save_netcdf_compression(giss_23_precip_hist_annual_aus, hist_output_dir, 'giss_23_precip_hist_annual_aus')
-save_netcdf_compression(giss_24_precip_hist_annual_aus, hist_output_dir, 'giss_24_precip_hist_annual_aus')
-save_netcdf_compression(giss_25_precip_hist_annual_aus, hist_output_dir, 'giss_25_precip_hist_annual_aus')
-save_netcdf_compression(giss_26_precip_hist_annual_aus, hist_output_dir, 'giss_26_precip_hist_annual_aus')
-save_netcdf_compression(giss_27_precip_hist_annual_aus, hist_output_dir, 'giss_27_precip_hist_annual_aus')
-save_netcdf_compression(giss_28_precip_hist_annual_aus, hist_output_dir, 'giss_28_precip_hist_annual_aus')
-save_netcdf_compression(hadcm3_precip_hist_annual_aus, hist_output_dir, 'hadcm3_precip_hist_annual_aus')
-save_netcdf_compression(ipsl_precip_hist_annual_aus, hist_output_dir, 'ipsl_precip_hist_annual_aus')
-save_netcdf_compression(miroc_precip_hist_annual_aus, hist_output_dir, 'miroc_precip_hist_annual_aus')
-save_netcdf_compression(mpi_precip_hist_annual_aus, hist_output_dir, 'mpi_precip_hist_annual_aus')
-save_netcdf_compression(mri_precip_hist_annual_aus, hist_output_dir, 'mri_precip_hist_annual_aus')
+    ff_all_precip_lm_annual_aus = get_aus(ff_all_precip_lm_annual)
+    giss_all_precip_lm_annual_aus = get_aus(giss_all_precip_lm_annual)
 
 
-save_netcdf_compression(ff1_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '1')
-save_netcdf_compression(ff2_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '2')
-save_netcdf_compression(ff3_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '3')
-save_netcdf_compression(ff4_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '4')
-save_netcdf_compression(ff5_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '5')
-save_netcdf_compression(ff6_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '6')
-save_netcdf_compression(ff7_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '7')
-save_netcdf_compression(ff8_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '8')
-save_netcdf_compression(ff9_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '9')
-save_netcdf_compression(ff10_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '10')
-save_netcdf_compression(ff11_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '11')
-save_netcdf_compression(ff12_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '12')
-save_netcdf_compression(ff13_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '13')
+    save_netcdf_compression(ff1_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '1')
+    save_netcdf_compression(ff2_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '2')
+    save_netcdf_compression(ff3_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '3')
+    save_netcdf_compression(ff4_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '4')
+    save_netcdf_compression(ff5_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '5')
+    save_netcdf_compression(ff6_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '6')
+    save_netcdf_compression(ff7_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '7')
+    save_netcdf_compression(ff8_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '8')
+    save_netcdf_compression(ff9_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '9')
+    save_netcdf_compression(ff10_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '10')
+    save_netcdf_compression(ff11_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '11')
+    save_netcdf_compression(ff12_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '12')
+    save_netcdf_compression(ff13_precip_lm_annual_aus, lm_output_dir, 'ff%s_precip_lm_annual_aus' % '13')
 
-save_netcdf_compression(bcc_precip_lm_annual_aus, lm_output_dir, 'bcc_precip_lm_annual_aus')
-save_netcdf_compression(ccsm4_precip_lm_annual_aus, lm_output_dir, 'ccsm4_precip_lm_annual_aus')
-save_netcdf_compression(csiro_mk3l_precip_lm_annual_aus, lm_output_dir, 'csiro_mk3l_precip_lm_annual_aus')
-save_netcdf_compression(fgoals_gl_precip_lm_annual_aus, lm_output_dir, 'fgoals_gl_precip_lm_annual_aus')
-save_netcdf_compression(fgoals_s2_precip_lm_annual_aus, lm_output_dir, 'fgoals_s2_precip_lm_annual_aus')
-save_netcdf_compression(giss_21_precip_lm_annual_aus, lm_output_dir, 'giss_21_precip_lm_annual_aus')
-save_netcdf_compression(giss_22_precip_lm_annual_aus, lm_output_dir, 'giss_22_precip_lm_annual_aus')
-save_netcdf_compression(giss_23_precip_lm_annual_aus, lm_output_dir, 'giss_23_precip_lm_annual_aus')
-save_netcdf_compression(giss_24_precip_lm_annual_aus, lm_output_dir, 'giss_24_precip_lm_annual_aus')
-save_netcdf_compression(giss_25_precip_lm_annual_aus, lm_output_dir, 'giss_25_precip_lm_annual_aus')
-save_netcdf_compression(giss_26_precip_lm_annual_aus, lm_output_dir, 'giss_26_precip_lm_annual_aus')
-save_netcdf_compression(giss_27_precip_lm_annual_aus, lm_output_dir, 'giss_27_precip_lm_annual_aus')
-save_netcdf_compression(giss_28_precip_lm_annual_aus, lm_output_dir, 'giss_28_precip_lm_annual_aus')
-save_netcdf_compression(hadcm3_precip_lm_annual_aus, lm_output_dir, 'hadcm3_precip_lm_annual_aus')
-save_netcdf_compression(ipsl_precip_lm_annual_aus, lm_output_dir, 'ipsl_precip_lm_annual_aus')
-save_netcdf_compression(miroc_precip_lm_annual_aus, lm_output_dir, 'miroc_precip_lm_annual_aus')
-save_netcdf_compression(mpi_precip_lm_annual_aus, lm_output_dir, 'mpi_precip_lm_annual_aus')
-save_netcdf_compression(mri_precip_lm_annual_aus, lm_output_dir, 'mri_precip_lm_annual_aus')
+    save_netcdf_compression(bcc_precip_lm_annual_aus, lm_output_dir, 'bcc_precip_lm_annual_aus')
+    save_netcdf_compression(ccsm4_precip_lm_annual_aus, lm_output_dir, 'ccsm4_precip_lm_annual_aus')
+    save_netcdf_compression(csiro_mk3l_precip_lm_annual_aus, lm_output_dir, 'csiro_mk3l_precip_lm_annual_aus')
+    save_netcdf_compression(fgoals_gl_precip_lm_annual_aus, lm_output_dir, 'fgoals_gl_precip_lm_annual_aus')
+    save_netcdf_compression(fgoals_s2_precip_lm_annual_aus, lm_output_dir, 'fgoals_s2_precip_lm_annual_aus')
+    save_netcdf_compression(giss_21_precip_lm_annual_aus, lm_output_dir, 'giss_21_precip_lm_annual_aus')
+    save_netcdf_compression(giss_22_precip_lm_annual_aus, lm_output_dir, 'giss_22_precip_lm_annual_aus')
+    save_netcdf_compression(giss_23_precip_lm_annual_aus, lm_output_dir, 'giss_23_precip_lm_annual_aus')
+    save_netcdf_compression(giss_24_precip_lm_annual_aus, lm_output_dir, 'giss_24_precip_lm_annual_aus')
+    save_netcdf_compression(giss_25_precip_lm_annual_aus, lm_output_dir, 'giss_25_precip_lm_annual_aus')
+    save_netcdf_compression(giss_26_precip_lm_annual_aus, lm_output_dir, 'giss_26_precip_lm_annual_aus')
+    save_netcdf_compression(giss_27_precip_lm_annual_aus, lm_output_dir, 'giss_27_precip_lm_annual_aus')
+    save_netcdf_compression(giss_28_precip_lm_annual_aus, lm_output_dir, 'giss_28_precip_lm_annual_aus')
+    save_netcdf_compression(hadcm3_precip_lm_annual_aus, lm_output_dir, 'hadcm3_precip_lm_annual_aus')
+    save_netcdf_compression(ipsl_precip_lm_annual_aus, lm_output_dir, 'ipsl_precip_lm_annual_aus')
+    save_netcdf_compression(miroc_precip_lm_annual_aus, lm_output_dir, 'miroc_precip_lm_annual_aus')
+    save_netcdf_compression(mpi_precip_lm_annual_aus, lm_output_dir, 'mpi_precip_lm_annual_aus')
+    save_netcdf_compression(mri_precip_lm_annual_aus, lm_output_dir, 'mri_precip_lm_annual_aus')
 
-save_netcdf_compression(ff_all_precip_lm_annual_aus, lm_output_dir, 'ff_all_precip_lm_annual_aus')
-save_netcdf_compression(giss_all_precip_lm_annual_aus, lm_output_dir, 'giss_all_precip_lm_annual_aus')
-
+    save_netcdf_compression(ff_all_precip_lm_annual_aus, lm_output_dir, 'ff_all_precip_lm_annual_aus')
+    save_netcdf_compression(giss_all_precip_lm_annual_aus, lm_output_dir, 'giss_all_precip_lm_annual_aus')
+else:
+    pass
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # ---------------------
 # ----- AWAP
