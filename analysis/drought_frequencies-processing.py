@@ -33,6 +33,9 @@ process_all_pmip3_files = False
 calculate_cesm_ens_means = False
 calculate_giss_ens_means = False
 subset_hist_files_to_Aus_only = False
+subset_lm_files_to_Aus_only = False
+process_awap = False
+
 
 # ---- set output directories etc
 historical_year = 1900
@@ -248,6 +251,7 @@ def read_in_pmip3(modelname, var):
 def droughts_historical_fromyear(ds, historical_year, output_dir, model_filename):
     print('... Calculating drought metrics for %s from %s onwards' % (model_filename, historical_year))
     ds_hist = ds.where(ds['year'] >= historical_year, drop=True)    # subset to historical period
+    ds_hist = ds_hist.where(ds_hist['year'] <= 2000, drop=True)  # clip to 2000 for everything
     ds_hist_clim = ds_hist.where(ds_hist['year'] <= 2000, drop=True)  # for historical, use up to 2000 for climatology
     # get years that are drought vs not drought
     ds_hist['drought_years_2s2e']       = climate_droughts_xr_funcs.get_drought_years_2S2E_apply(ds_hist.PRECT_mm, ds_hist_clim.PRECT_mm.mean(dim='year'))
@@ -327,7 +331,8 @@ def droughts_lm_thresholdyears(ds, threshold_startyear, threshold_endyear, outpu
     
     ds_lm = ds
     ds_clim = ds_lm.where((ds_lm['year'] >= threshold_startyear) & (ds_lm['year'] <= threshold_endyear), drop=True)
-    
+    ds_lm = ds_lm.where(ds_lm['year'] <= 2000, drop=True)  # clip to 2000 for everything
+
     # get years that are drought vs not drought
     ds_lm['drought_years_2s2e']       = climate_droughts_xr_funcs.get_drought_years_2S2E_apply(ds_lm.PRECT_mm, ds_clim.PRECT_mm.mean(dim='year'))
     ds_lm['drought_years_median']     = climate_droughts_xr_funcs.get_drought_years_below_threshold_apply(ds_lm.PRECT_mm, ds_clim.PRECT_mm.quantile(0.5, dim=('year')))
@@ -449,11 +454,11 @@ def save_netcdf_compression(ds, output_dir, filename):
 # Instructions for regridding using xesmf are here: https://xesmf.readthedocs.io/en/latest/notebooks/Dataset.html
 def regrid_files(ds_to_regrid, ds_target ):
     # resolution of output: same as cesm-lme
-    ds_out = xr.Dataset({'lat': (['lat'], ds_target.lat),
-                         'lon': (['lon'], ds_target.lon)})
+    ds_out = xr.Dataset({'lat': (['lat'], ds_target.lat.data),
+                         'lon': (['lon'], ds_target.lon.data)})
 
     regridder = xe.Regridder(ds_to_regrid, ds_out, 'bilinear')
-    regridder.clean_weight_file()
+    # regridder.clean_weight_file()
 
     ds_out = regridder(ds_to_regrid)
     for k in ds_to_regrid.data_vars:
@@ -960,7 +965,41 @@ if subset_hist_files_to_Aus_only is True:
     save_netcdf_compression(giss_all_precip_hist_annual_aus, hist_output_dir, 'giss_all_precip_hist_annual_aus')
 
 else:
-    pass
+    bcc_precip_hist_annual_aus        = xr.open_dataset('%s/bcc_precip_hist_annual_aus.nc' % hist_output_dir)
+    ccsm4_precip_hist_annual_aus      = xr.open_dataset('%s/ccsm4_precip_hist_annual_aus.nc' % hist_output_dir)
+    csiro_mk3l_precip_hist_annual_aus = xr.open_dataset('%s/csiro_mk3l_precip_hist_annual_aus.nc' % hist_output_dir)
+    fgoals_gl_precip_hist_annual_aus  = xr.open_dataset('%s/fgoals_gl_precip_hist_annual_aus.nc' % hist_output_dir)
+    fgoals_s2_precip_hist_annual_aus  = xr.open_dataset('%s/fgoals_s2_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_21_precip_hist_annual_aus    = xr.open_dataset('%s/giss_21_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_22_precip_hist_annual_aus    = xr.open_dataset('%s/giss_22_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_23_precip_hist_annual_aus    = xr.open_dataset('%s/giss_23_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_24_precip_hist_annual_aus    = xr.open_dataset('%s/giss_24_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_25_precip_hist_annual_aus    = xr.open_dataset('%s/giss_25_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_26_precip_hist_annual_aus    = xr.open_dataset('%s/giss_26_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_27_precip_hist_annual_aus    = xr.open_dataset('%s/giss_27_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_28_precip_hist_annual_aus    = xr.open_dataset('%s/giss_28_precip_hist_annual_aus.nc' % hist_output_dir)
+    hadcm3_precip_hist_annual_aus    = xr.open_dataset('%s/hadcm3_precip_hist_annual_aus.nc' % hist_output_dir)
+    ipsl_precip_hist_annual_aus       = xr.open_dataset('%s/ipsl_precip_hist_annual_aus.nc' % hist_output_dir)
+    miroc_precip_hist_annual_aus      = xr.open_dataset('%s/miroc_precip_hist_annual_aus.nc' % hist_output_dir)
+    mpi_precip_hist_annual_aus        = xr.open_dataset('%s/mpi_precip_hist_annual_aus.nc' % hist_output_dir)
+    mri_precip_hist_annual_aus        = xr.open_dataset('%s/mri_precip_hist_annual_aus.nc' % hist_output_dir)
+
+    ff1_precip_hist_annual_aus = xr.open_dataset('%s/ff1_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff2_precip_hist_annual_aus = xr.open_dataset('%s/ff2_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff3_precip_hist_annual_aus = xr.open_dataset('%s/ff3_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff4_precip_hist_annual_aus = xr.open_dataset('%s/ff4_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff5_precip_hist_annual_aus = xr.open_dataset('%s/ff5_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff6_precip_hist_annual_aus = xr.open_dataset('%s/ff6_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff7_precip_hist_annual_aus = xr.open_dataset('%s/ff7_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff8_precip_hist_annual_aus = xr.open_dataset('%s/ff8_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff9_precip_hist_annual_aus = xr.open_dataset('%s/ff9_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff10_precip_hist_annual_aus = xr.open_dataset('%s/ff10_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff11_precip_hist_annual_aus = xr.open_dataset('%s/ff11_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff12_precip_hist_annual_aus = xr.open_dataset('%s/ff12_precip_hist_annual_aus.nc' % hist_output_dir)
+    ff13_precip_hist_annual_aus = xr.open_dataset('%s/ff13_precip_hist_annual_aus.nc' % hist_output_dir)
+
+    ff_all_precip_hist_annual_aus = xr.open_dataset('%s/ff_all_precip_hist_annual_aus.nc' % hist_output_dir)
+    giss_all_precip_hist_annual_aus = xr.open_dataset('%s/giss_all_precip_hist_annual_aus.nc' % hist_output_dir)
 
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1040,27 +1079,77 @@ if subset_lm_files_to_Aus_only is True:
     save_netcdf_compression(ff_all_precip_lm_annual_aus, lm_output_dir, 'ff_all_precip_lm_annual_aus')
     save_netcdf_compression(giss_all_precip_lm_annual_aus, lm_output_dir, 'giss_all_precip_lm_annual_aus')
 else:
-    pass
+    # read in processed files
+    bcc_precip_lm_annual_aus        = xr.open_dataset('%s/bcc_precip_lm_annual_aus.nc' % lm_output_dir)
+    ccsm4_precip_lm_annual_aus      = xr.open_dataset('%s/ccsm4_precip_lm_annual_aus.nc' % lm_output_dir)
+    csiro_mk3l_precip_lm_annual_aus = xr.open_dataset('%s/csiro_mk3l_precip_lm_annual_aus.nc' % lm_output_dir)
+    fgoals_gl_precip_lm_annual_aus  = xr.open_dataset('%s/fgoals_gl_precip_lm_annual_aus.nc' % lm_output_dir)
+    fgoals_s2_precip_lm_annual_aus  = xr.open_dataset('%s/fgoals_s2_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_21_precip_lm_annual_aus    = xr.open_dataset('%s/giss_21_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_22_precip_lm_annual_aus    = xr.open_dataset('%s/giss_22_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_23_precip_lm_annual_aus    = xr.open_dataset('%s/giss_23_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_24_precip_lm_annual_aus    = xr.open_dataset('%s/giss_24_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_25_precip_lm_annual_aus    = xr.open_dataset('%s/giss_25_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_26_precip_lm_annual_aus    = xr.open_dataset('%s/giss_26_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_27_precip_lm_annual_aus    = xr.open_dataset('%s/giss_27_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_28_precip_lm_annual_aus    = xr.open_dataset('%s/giss_28_precip_lm_annual_aus.nc' % lm_output_dir)
+    hadcm3_precip_lm_annual_aus    = xr.open_dataset('%s/hadcm3_precip_lm_annual_aus.nc' % lm_output_dir)
+    ipsl_precip_lm_annual_aus       = xr.open_dataset('%s/ipsl_precip_lm_annual_aus.nc' % lm_output_dir)
+    miroc_precip_lm_annual_aus      = xr.open_dataset('%s/miroc_precip_lm_annual_aus.nc' % lm_output_dir)
+    mpi_precip_lm_annual_aus        = xr.open_dataset('%s/mpi_precip_lm_annual_aus.nc' % lm_output_dir)
+    mri_precip_lm_annual_aus        = xr.open_dataset('%s/mri_precip_lm_annual_aus.nc' % lm_output_dir)
+
+    ff1_precip_lm_annual_aus = xr.open_dataset('%s/ff1_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff2_precip_lm_annual_aus = xr.open_dataset('%s/ff2_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff3_precip_lm_annual_aus = xr.open_dataset('%s/ff3_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff4_precip_lm_annual_aus = xr.open_dataset('%s/ff4_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff5_precip_lm_annual_aus = xr.open_dataset('%s/ff5_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff6_precip_lm_annual_aus = xr.open_dataset('%s/ff6_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff7_precip_lm_annual_aus = xr.open_dataset('%s/ff7_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff8_precip_lm_annual_aus = xr.open_dataset('%s/ff8_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff9_precip_lm_annual_aus = xr.open_dataset('%s/ff9_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff10_precip_lm_annual_aus = xr.open_dataset('%s/ff10_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff11_precip_lm_annual_aus = xr.open_dataset('%s/ff11_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff12_precip_lm_annual_aus = xr.open_dataset('%s/ff12_precip_lm_annual_aus.nc' % lm_output_dir)
+    ff13_precip_lm_annual_aus = xr.open_dataset('%s/ff13_precip_lm_annual_aus.nc' % lm_output_dir)
+
+    ff_all_precip_lm_annual_aus = xr.open_dataset('%s/ff_all_precip_lm_annual_aus.nc' % lm_output_dir)
+    giss_all_precip_lm_annual_aus = xr.open_dataset('%s/giss_all_precip_lm_annual_aus.nc' % lm_output_dir)
+
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 # ---------------------
 # ----- AWAP
-print('... awap')
-awap = xr.open_dataset('/Volumes/LaCie/droughts/Monthly_total_precipitation_AWAP_1900_2016_gapfilled_with_mon_mean.nc')
-awap_masked= xr.open_dataset('/Volumes/LaCie/droughts/Monthly_total_precipitation_AWAP_masked_1900_2016.nc')
-awap_masked_annual = awap_masked.groupby('time.year').sum('time', skipna=False)
-awap_masked_annual['PRECT_mm'] = awap_masked_annual.pre
+if process_awap is True:
+    print('... awap')
+    awap = xr.open_dataset('/Volumes/LaCie/droughts/Monthly_total_precipitation_AWAP_1900_2016_gapfilled_with_mon_mean.nc')
+    awap_masked= xr.open_dataset('/Volumes/LaCie/droughts/Monthly_total_precipitation_AWAP_masked_1900_2016.nc')
+    awap_masked_annual = awap_masked.groupby('time.year').sum('time', skipna=False)
+    awap_masked_annual['PRECT_mm'] = awap_masked_annual.pre
 
-# rename awap things to be the same as the masked version
-awap = awap.rename({'longitude': 'lon', 'latitude': 'lat', 'z':'time', 'variable': 'pre'})
+    # rename awap things to be the same as the masked version
+    awap = awap.rename({'longitude': 'lon', 'latitude': 'lat', 'z':'time', 'variable': 'pre'})
 
-# replace times with those in masked
-awap['time'] = awap_masked.time
+    # replace times with those in masked
+    awap['time'] = awap_masked.time
 
-# %%
-awap_gf_annual = awap.groupby('time.year').sum('time', skipna=False)
-awap_gf_annual['PRECT_mm'] = awap_gf_annual.pre
+    # %%
+    awap_gf_annual = awap.groupby('time.year').sum('time', skipna=False)
+    awap_gf_annual['PRECT_mm'] = awap_gf_annual.pre
 
-awap_gf_annual = droughts_historical_fromyear(awap_gf_annual, historical_year, hist_output_dir, 'awap_gf')
+    awap_gf_annual = awap_gf_annual.where(awap_gf_annual['year'] <= 2000, drop=True)
+
+    awap_gf_annual = droughts_historical_fromyear(awap_gf_annual, historical_year, hist_output_dir, 'awap_gf')
+    save_netcdf_compression(awap_gf_annual, hist_output_dir, 'awap_gf_annual')
+
+else:
+    awap_gf_annual = xr.open_dataset('%s/awap_gf_annual.nc' % hist_output_dir)
+    pass
+
+
+
+
+
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # ---------------------
