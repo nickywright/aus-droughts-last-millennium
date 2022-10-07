@@ -20,6 +20,7 @@ from scipy import stats
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # some options for running
+regrid_awap_to_model_res = True
 # ---- set output directories etc
 historical_year = 1900
 hist_output_dir = '../files/historical_1900'
@@ -29,6 +30,9 @@ lm_threshold_startyear = 1900
 lm_threshold_endyear = 2000
 
 lm_output_dir = '../files/lastmillennium_threshold_1900-2000'
+
+if not os.path.exists('%s/awap_regridded' % hist_output_dir):
+    os.makedirs('%s/awap_regridded' % hist_output_dir)
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # ------ regrid AWAP to other grid resolution
@@ -269,6 +273,9 @@ def get_significance_droughts_wilcoxon(ds_model, awap):
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 print('... importing Aus historical files')
+
+awap_gf_annual = xr.open_dataset('%s/awap_gf_annual.nc' % hist_output_dir)
+
 bcc_precip_hist_annual_aus        = xr.open_dataset('%s/aus/bcc_precip_hist_annual_aus.nc' % hist_output_dir)
 ccsm4_precip_hist_annual_aus      = xr.open_dataset('%s/aus/ccsm4_precip_hist_annual_aus.nc' % hist_output_dir)
 csiro_mk3l_precip_hist_annual_aus = xr.open_dataset('%s/aus/csiro_mk3l_precip_hist_annual_aus.nc' % hist_output_dir)
@@ -303,153 +310,177 @@ ff11_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff11_precip_hist_a
 ff12_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff12_precip_hist_annual_aus.nc' % hist_output_dir)
 ff13_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff13_precip_hist_annual_aus.nc' % hist_output_dir)
 
-ff_all_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff_all_precip_hist_annual_aus.nc' % hist_output_dir)
+# ff_all_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff_all_precip_hist_annual_aus.nc' % hist_output_dir)
 
-# read in processed files
-lme_850forcing3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-850forcing3_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ghg1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg1_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ghg2_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg2_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ghg3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg3_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_lulc1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc1_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_lulc2_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc2_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_lulc3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc3_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_orbital1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital1_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_orbital2_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital2_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_orbital3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital3_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_solar1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar1_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_solar3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar3_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_solar4_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar4_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_solar5_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar5_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ozone1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone1_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ozone2_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone2_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ozone3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone3_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ozone4_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone4_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ozone5_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone5_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_volc1_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc1_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_volc2_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc2_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_volc3_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc3_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_volc4_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc4_precip_hist_annual_aus.nc' % hist_output_dir)
+# # read in processed files
+# lme_850forcing3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-850forcing3_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ghg1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg1_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ghg2_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg2_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ghg3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg3_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_lulc1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc1_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_lulc2_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc2_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_lulc3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc3_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_orbital1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital1_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_orbital2_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital2_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_orbital3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital3_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_solar1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar1_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_solar3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar3_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_solar4_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar4_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_solar5_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar5_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ozone1_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone1_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ozone2_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone2_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ozone3_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone3_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ozone4_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone4_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ozone5_precip_hist_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone5_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_volc1_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc1_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_volc2_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc2_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_volc3_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc3_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_volc4_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc4_precip_hist_annual_aus.nc' % hist_output_dir)
 
-lme_ghg_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-ghg_all_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_lulc_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-lulc_all_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_orbital_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-orbital_all_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_solar_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-solar_all_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_ozone_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-ozone_all_precip_hist_annual_aus.nc' % hist_output_dir)
-lme_volc_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc_all_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ghg_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-ghg_all_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_lulc_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-lulc_all_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_orbital_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-orbital_all_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_solar_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-solar_all_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_ozone_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-ozone_all_precip_hist_annual_aus.nc' % hist_output_dir)
+# lme_volc_all_precip_hist_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc_all_precip_hist_annual_aus.nc' % hist_output_dir)
 
-# ---- last millennium
-# read in processed files
-bcc_precip_lm_annual_aus        = xr.open_dataset('%s/aus/bcc_precip_lm_annual_aus.nc' % lm_output_dir)
-ccsm4_precip_lm_annual_aus      = xr.open_dataset('%s/aus/ccsm4_precip_lm_annual_aus.nc' % lm_output_dir)
-csiro_mk3l_precip_lm_annual_aus = xr.open_dataset('%s/aus/csiro_mk3l_precip_lm_annual_aus.nc' % lm_output_dir)
-fgoals_gl_precip_lm_annual_aus  = xr.open_dataset('%s/aus/fgoals_gl_precip_lm_annual_aus.nc' % lm_output_dir)
-fgoals_s2_precip_lm_annual_aus  = xr.open_dataset('%s/aus/fgoals_s2_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_21_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_21_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_22_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_22_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_23_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_23_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_24_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_24_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_25_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_25_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_26_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_26_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_27_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_27_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_28_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_28_precip_lm_annual_aus.nc' % lm_output_dir)
-hadcm3_precip_lm_annual_aus     = xr.open_dataset('%s/aus/hadcm3_precip_lm_annual_aus.nc' % lm_output_dir)
-ipsl_precip_lm_annual_aus       = xr.open_dataset('%s/aus/ipsl_precip_lm_annual_aus.nc' % lm_output_dir)
-miroc_precip_lm_annual_aus      = xr.open_dataset('%s/aus/miroc_precip_lm_annual_aus.nc' % lm_output_dir)
-mpi_precip_lm_annual_aus        = xr.open_dataset('%s/aus/mpi_precip_lm_annual_aus.nc' % lm_output_dir)
-mri_precip_lm_annual_aus        = xr.open_dataset('%s/aus/mri_precip_lm_annual_aus.nc' % lm_output_dir)
-giss_all_precip_lm_annual_aus   = xr.open_dataset('%s/aus/giss_all_precip_lm_annual_aus.nc' % lm_output_dir)
-
-
-# import files
-ff1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff1_precip_lm_annual_aus.nc' % lm_output_dir)
-ff2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff2_precip_lm_annual_aus.nc' % lm_output_dir)
-ff3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff3_precip_lm_annual_aus.nc' % lm_output_dir)
-ff4_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff4_precip_lm_annual_aus.nc' % lm_output_dir)
-ff5_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff5_precip_lm_annual_aus.nc' % lm_output_dir)
-ff6_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff6_precip_lm_annual_aus.nc' % lm_output_dir)
-ff7_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff7_precip_lm_annual_aus.nc' % lm_output_dir)
-ff8_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff8_precip_lm_annual_aus.nc' % lm_output_dir)
-ff9_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff9_precip_lm_annual_aus.nc' % lm_output_dir)
-ff10_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff10_precip_lm_annual_aus.nc' % lm_output_dir)
-ff11_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff11_precip_lm_annual_aus.nc' % lm_output_dir)
-ff12_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff12_precip_lm_annual_aus.nc' % lm_output_dir)
-ff13_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff13_precip_lm_annual_aus.nc' % lm_output_dir)
-
-ff_all_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff_all_precip_lm_annual_aus.nc' % lm_output_dir)
+# # ---- last millennium
+# # read in processed files
+# bcc_precip_lm_annual_aus        = xr.open_dataset('%s/aus/bcc_precip_lm_annual_aus.nc' % lm_output_dir)
+# ccsm4_precip_lm_annual_aus      = xr.open_dataset('%s/aus/ccsm4_precip_lm_annual_aus.nc' % lm_output_dir)
+# csiro_mk3l_precip_lm_annual_aus = xr.open_dataset('%s/aus/csiro_mk3l_precip_lm_annual_aus.nc' % lm_output_dir)
+# fgoals_gl_precip_lm_annual_aus  = xr.open_dataset('%s/aus/fgoals_gl_precip_lm_annual_aus.nc' % lm_output_dir)
+# fgoals_s2_precip_lm_annual_aus  = xr.open_dataset('%s/aus/fgoals_s2_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_21_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_21_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_22_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_22_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_23_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_23_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_24_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_24_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_25_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_25_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_26_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_26_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_27_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_27_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_28_precip_lm_annual_aus    = xr.open_dataset('%s/aus/giss_28_precip_lm_annual_aus.nc' % lm_output_dir)
+# hadcm3_precip_lm_annual_aus     = xr.open_dataset('%s/aus/hadcm3_precip_lm_annual_aus.nc' % lm_output_dir)
+# ipsl_precip_lm_annual_aus       = xr.open_dataset('%s/aus/ipsl_precip_lm_annual_aus.nc' % lm_output_dir)
+# miroc_precip_lm_annual_aus      = xr.open_dataset('%s/aus/miroc_precip_lm_annual_aus.nc' % lm_output_dir)
+# mpi_precip_lm_annual_aus        = xr.open_dataset('%s/aus/mpi_precip_lm_annual_aus.nc' % lm_output_dir)
+# mri_precip_lm_annual_aus        = xr.open_dataset('%s/aus/mri_precip_lm_annual_aus.nc' % lm_output_dir)
+# giss_all_precip_lm_annual_aus   = xr.open_dataset('%s/aus/giss_all_precip_lm_annual_aus.nc' % lm_output_dir)
 
 
-# read in processed files
-lme_850forcing3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-850forcing3_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ghg1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg1_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ghg2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg2_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ghg3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg3_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_lulc1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc1_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_lulc2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc2_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_lulc3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc3_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_orbital1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital1_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_orbital2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital2_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_orbital3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital3_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_solar1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar1_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_solar3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar3_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_solar4_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar4_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_solar5_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar5_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ozone1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone1_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ozone2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone2_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ozone3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone3_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ozone4_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone4_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ozone5_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone5_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_volc1_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc1_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_volc2_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc2_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_volc3_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc3_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_volc4_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc4_precip_lm_annual_aus.nc' % lm_output_dir)
+# # import files
+# ff1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff1_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff2_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff3_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff4_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff4_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff5_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff5_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff6_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff6_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff7_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff7_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff8_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff8_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff9_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff9_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff10_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff10_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff11_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff11_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff12_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff12_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff13_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff13_precip_lm_annual_aus.nc' % lm_output_dir)
 
-lme_ghg_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-ghg_all_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_lulc_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-lulc_all_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_orbital_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-orbital_all_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_solar_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-solar_all_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_ozone_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-ozone_all_precip_lm_annual_aus.nc' % lm_output_dir)
-lme_volc_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc_all_precip_lm_annual_aus.nc' % lm_output_dir)
+# ff_all_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ff_all_precip_lm_annual_aus.nc' % lm_output_dir)
 
 
+# # read in processed files
+# lme_850forcing3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-850forcing3_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ghg1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg1_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ghg2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg2_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ghg3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ghg3_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_lulc1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc1_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_lulc2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc2_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_lulc3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-lulc3_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_orbital1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital1_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_orbital2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital2_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_orbital3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-orbital3_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_solar1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar1_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_solar3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar3_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_solar4_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar4_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_solar5_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-solar5_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ozone1_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone1_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ozone2_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone2_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ozone3_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone3_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ozone4_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone4_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ozone5_precip_lm_annual_aus = xr.open_dataset('%s/aus/cesmlme-ozone5_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_volc1_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc1_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_volc2_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc2_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_volc3_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc3_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_volc4_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc4_precip_lm_annual_aus.nc' % lm_output_dir)
+
+# lme_ghg_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-ghg_all_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_lulc_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-lulc_all_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_orbital_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-orbital_all_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_solar_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-solar_all_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_ozone_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-ozone_all_precip_lm_annual_aus.nc' % lm_output_dir)
+# lme_volc_all_precip_lm_annual_aus  = xr.open_dataset('%s/aus/cesmlme-volc_all_precip_lm_annual_aus.nc' % lm_output_dir)
 
 
 
 # -----------------------------------------------
 # regrid AWAP to whatever model res is
-awap_masked_annual_bcc_res = regrid_files(awap_gf_annual, bcc_precip_hist_annual_aus)
-awap_masked_annual_ccsm4_res = regrid_files(awap_gf_annual, ccsm4_precip_hist_annual_aus)
-awap_masked_annual_csiro_mk3l_res = regrid_files(awap_gf_annual, csiro_mk3l_precip_hist_annual_aus)
-awap_masked_annual_fgoals_gl_res = regrid_files(awap_gf_annual, fgoals_gl_precip_hist_annual_aus)
-awap_masked_annual_fgoals_s2_res = regrid_files(awap_gf_annual, fgoals_s2_precip_hist_annual_aus)
-awap_masked_annual_giss_21_res = regrid_files(awap_gf_annual, giss_21_precip_hist_annual_aus)
-awap_masked_annual_giss_22_res = regrid_files(awap_gf_annual, giss_22_precip_hist_annual_aus)
-awap_masked_annual_giss_23_res = regrid_files(awap_gf_annual, giss_23_precip_hist_annual_aus)
-awap_masked_annual_giss_24_res = regrid_files(awap_gf_annual, giss_24_precip_hist_annual_aus)
-awap_masked_annual_giss_25_res = regrid_files(awap_gf_annual, giss_25_precip_hist_annual_aus)
-awap_masked_annual_giss_26_res = regrid_files(awap_gf_annual, giss_26_precip_hist_annual_aus)
-awap_masked_annual_giss_27_res = regrid_files(awap_gf_annual, giss_27_precip_hist_annual_aus)
-awap_masked_annual_giss_28_res = regrid_files(awap_gf_annual, giss_28_precip_hist_annual_aus)
-awap_masked_annual_hadcm3_res = regrid_files(awap_gf_annual, hadcm3_precip_hist_annual_aus)
-awap_masked_annual_ipsl_res = regrid_files(awap_gf_annual, ipsl_precip_hist_annual_aus)
-awap_masked_annual_miroc_res = regrid_files(awap_gf_annual, miroc_precip_hist_annual_aus)
-awap_masked_annual_mpi_res = regrid_files(awap_gf_annual, mpi_precip_hist_annual_aus)
-awap_masked_annual_mri_res = regrid_files(awap_gf_annual, mri_precip_hist_annual_aus)
-awap_masked_annual_ff1_res = regrid_files(awap_gf_annual, ff1_precip_hist_annual_aus)
-awap_masked_annual_ff2_res = regrid_files(awap_gf_annual, ff2_precip_hist_annual_aus)
-awap_masked_annual_ff3_res = regrid_files(awap_gf_annual, ff3_precip_hist_annual_aus)
-awap_masked_annual_ff4_res = regrid_files(awap_gf_annual, ff4_precip_hist_annual_aus)
-awap_masked_annual_ff5_res = regrid_files(awap_gf_annual, ff5_precip_hist_annual_aus)
-awap_masked_annual_ff6_res = regrid_files(awap_gf_annual, ff6_precip_hist_annual_aus)
-awap_masked_annual_ff7_res = regrid_files(awap_gf_annual, ff7_precip_hist_annual_aus)
-awap_masked_annual_ff8_res = regrid_files(awap_gf_annual, ff8_precip_hist_annual_aus)
-awap_masked_annual_ff9_res = regrid_files(awap_gf_annual, ff9_precip_hist_annual_aus)
-awap_masked_annual_ff10_res = regrid_files(awap_gf_annual, ff10_precip_hist_annual_aus)
-awap_masked_annual_ff11_res = regrid_files(awap_gf_annual, ff11_precip_hist_annual_aus)
-awap_masked_annual_ff12_res = regrid_files(awap_gf_annual, ff12_precip_hist_annual_aus)
-awap_masked_annual_ff13_res = regrid_files(awap_gf_annual, ff13_precip_hist_annual_aus)
+if regrid_awap_to_model_res is True:
+    awap_masked_annual_bcc_res = regrid_files(awap_gf_annual, bcc_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_bcc_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_bcc')
 
-awap_masked_annual_ff_all_res = regrid_files(awap_gf_annual, ff_all_precip_hist_annual_aus)
-awap_masked_annual_giss_all_res = regrid_files(awap_gf_annual, giss_all_precip_hist_annual_aus)
+    awap_masked_annual_ccsm4_res = regrid_files(awap_gf_annual, ccsm4_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_ccsm4_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_ccsm4')
+
+    awap_masked_annual_csiro_mk3l_res = regrid_files(awap_gf_annual, csiro_mk3l_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_csiro_mk3l_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_csiro_mk3l')
+
+    awap_masked_annual_fgoals_gl_res = regrid_files(awap_gf_annual, fgoals_gl_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_fgoals_gl_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_fgoals_gl')
+
+    awap_masked_annual_fgoals_s2_res = regrid_files(awap_gf_annual, fgoals_s2_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_fgoals_s2_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_fgoals_s2')
+
+    awap_masked_annual_giss_21_res = regrid_files(awap_gf_annual, giss_21_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_giss_21_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_giss')
+    # awap_masked_annual_giss_22_res = regrid_files(awap_gf_annual, giss_22_precip_hist_annual_aus)
+    # awap_masked_annual_giss_23_res = regrid_files(awap_gf_annual, giss_23_precip_hist_annual_aus)
+    # awap_masked_annual_giss_24_res = regrid_files(awap_gf_annual, giss_24_precip_hist_annual_aus)
+    # awap_masked_annual_giss_25_res = regrid_files(awap_gf_annual, giss_25_precip_hist_annual_aus)
+    # awap_masked_annual_giss_26_res = regrid_files(awap_gf_annual, giss_26_precip_hist_annual_aus)
+    # awap_masked_annual_giss_27_res = regrid_files(awap_gf_annual, giss_27_precip_hist_annual_aus)
+    # awap_masked_annual_giss_28_res = regrid_files(awap_gf_annual, giss_28_precip_hist_annual_aus)
+    awap_masked_annual_hadcm3_res = regrid_files(awap_gf_annual, hadcm3_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_hadcm3_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_hadcm3')
+    awap_masked_annual_ipsl_res = regrid_files(awap_gf_annual, ipsl_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_ipsl_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_ipsl')
+    awap_masked_annual_miroc_res = regrid_files(awap_gf_annual, miroc_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_miroc_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_miroc')
+    awap_masked_annual_mpi_res = regrid_files(awap_gf_annual, mpi_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_mpi_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_mpi')
+    awap_masked_annual_mri_res = regrid_files(awap_gf_annual, mri_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_mri_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_mri')
+    awap_masked_annual_ff1_res = regrid_files(awap_gf_annual, ff1_precip_hist_annual_aus)
+    save_netcdf_compression(awap_masked_annual_ff1_res, hist_output_dir + '/awap_regridded', 'awap_gf_annual_regridded_to_cesmlme')
+    # awap_masked_annual_ff2_res = regrid_files(awap_gf_annual, ff2_precip_hist_annual_aus)
+    # awap_masked_annual_ff3_res = regrid_files(awap_gf_annual, ff3_precip_hist_annual_aus)
+    # awap_masked_annual_ff4_res = regrid_files(awap_gf_annual, ff4_precip_hist_annual_aus)
+    # awap_masked_annual_ff5_res = regrid_files(awap_gf_annual, ff5_precip_hist_annual_aus)
+    # awap_masked_annual_ff6_res = regrid_files(awap_gf_annual, ff6_precip_hist_annual_aus)
+    # awap_masked_annual_ff7_res = regrid_files(awap_gf_annual, ff7_precip_hist_annual_aus)
+    # awap_masked_annual_ff8_res = regrid_files(awap_gf_annual, ff8_precip_hist_annual_aus)
+    # awap_masked_annual_ff9_res = regrid_files(awap_gf_annual, ff9_precip_hist_annual_aus)
+    # awap_masked_annual_ff10_res = regrid_files(awap_gf_annual, ff10_precip_hist_annual_aus)
+    # awap_masked_annual_ff11_res = regrid_files(awap_gf_annual, ff11_precip_hist_annual_aus)
+    # awap_masked_annual_ff12_res = regrid_files(awap_gf_annual, ff12_precip_hist_annual_aus)
+    # awap_masked_annual_ff13_res = regrid_files(awap_gf_annual, ff13_precip_hist_annual_aus)
+
+    # awap_masked_annual_ff_all_res = regrid_files(awap_gf_annual, ff_all_precip_hist_annual_aus)
+    # awap_masked_annual_giss_all_res = regrid_files(awap_gf_annual, giss_all_precip_hist_annual_aus)
+
+else:
+    pass
+
+
+
+quit()
+
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 print('... kstest')
