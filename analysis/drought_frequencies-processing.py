@@ -16,7 +16,6 @@ import cftime
 import regionmask
 import os
 # import salem
-import xesmf as xe
 from dask.diagnostics import ProgressBar
 
 from scipy import stats
@@ -30,18 +29,19 @@ filepath_cesm_mon = '/Volumes/LaCie/CMIP5-PMIP3/CESM-LME/mon'
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # some options for running
 process_cesm_fullforcing_files = False
-process_cesm_singleforcing_files = True
+process_cesm_singleforcing_files = False
 
 process_all_pmip3_files = False
 calculate_cesm_ff_ens_means = False
 calculate_giss_ens_means = False
-calculate_cesm_sf_ens_means = False
+calculate_cesm_sf_ens_means = True
+
 subset_pmip3_hist_files_to_Aus_only = False
 subset_lme_ff_hist_files_to_Aus_only = False
-subset_lme_single_forcing_hist_files_to_Aus_only = False
+subset_lme_single_forcing_hist_files_to_Aus_only = True
 subset_pmip3_lm_files_to_Aus_only = False
 subset_lme_ff_lm_files_to_Aus_only = False
-subset_lme_single_forcing_lm_files_to_Aus_only = False
+subset_lme_single_forcing_lm_files_to_Aus_only = True
 
 process_awap = False
 
@@ -480,232 +480,6 @@ def save_netcdf_compression(ds, output_dir, filename):
     with ProgressBar():
         results = delayed_obj.compute()
 
-# %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# ------ regrid AWAP to other grid resolution
-# this is in preparation of doing some stats tests
-
-# --- DEF
-# Instructions for regridding using xesmf are here: https://xesmf.readthedocs.io/en/latest/notebooks/Dataset.html
-def regrid_files(ds_to_regrid, ds_target ):
-    # resolution of output: same as cesm-lme
-    ds_out = xr.Dataset({'lat': (['lat'], ds_target.lat.data),
-                         'lon': (['lon'], ds_target.lon.data)})
-
-    regridder = xe.Regridder(ds_to_regrid, ds_out, 'bilinear')
-    # regridder.clean_weight_file()
-
-    ds_out = regridder(ds_to_regrid)
-    for k in ds_to_regrid.data_vars:
-        print(k, ds_out[k].equals(regridder(ds_to_regrid[k])))
-
-    return ds_out
-
-# Some definitions
-# --- DEFs - ks-test
-def kstest_2samp(x,y):
-    # drop nans - otherwise seems to influence things?
-    xx = x[~np.isnan(x)]
-    yy = y[~np.isnan(y)]
-
-    # check if array is 0 len
-    if (len(xx) == 0) and (len(yy) == 0):
-        # both were full of nans, set output to nan
-        p_value = np.nan
-    elif (len(xx) == 0) or (len(yy) == 0):
-        # one is a nan, try the test. Most likely will fail?
-        p_value = np.nan
-    else:
-        tau, p_value = stats.ks_2samp(xx, yy)
-    return p_value
-
-def kstest_apply(x,y,dim='year'):
-    # dim name is the name of the dimension we're applying it over
-    return xr.apply_ufunc(kstest_2samp, x , y, input_core_dims=[[dim], [dim]], vectorize=True,
-        output_dtypes=[float],  join='outer' # join='outer' seems to allow unequal lengths for dims-of-interest
-        )
-
-def get_significance_droughts_kstest(ds_model, awap):
-    ds_sig = xr.Dataset()  # empy ds
-    ds_sig['droughts_2s2e'] = kstest_apply(ds_model.droughts_2s2e, awap.droughts_2s2e)
-    ds_sig['droughts_2s2e_intensity'] = kstest_apply(ds_model.droughts_2s2e_intensity, awap.droughts_2s2e_intensity)
-    ds_sig['droughts_2s2e_severity'] = kstest_apply(ds_model.droughts_2s2e_severity, awap.droughts_2s2e_severity)
-
-    ds_sig['droughts_median'] = kstest_apply(ds_model.droughts_median, awap.droughts_median)
-    ds_sig['droughts_median_intensity'] = kstest_apply(ds_model.droughts_median_intensity, awap.droughts_median_intensity)
-    ds_sig['droughts_median_severity'] = kstest_apply(ds_model.droughts_median_severity, awap.droughts_median_severity)
-
-    ds_sig['droughts_20perc'] = kstest_apply(ds_model.droughts_20perc, awap.droughts_20perc)
-    ds_sig['droughts_20perc_intensity'] = kstest_apply(ds_model.droughts_20perc_intensity, awap.droughts_20perc_intensity)
-    ds_sig['droughts_20perc_severity'] = kstest_apply(ds_model.droughts_20perc_severity, awap.droughts_20perc_severity)
-
-    ds_sig['droughts_120pc_2med'] = kstest_apply(ds_model.droughts_120pc_2med, awap.droughts_120pc_2med)
-    ds_sig['droughts_120pc_2med_intensity'] = kstest_apply(ds_model.droughts_120pc_2med_intensity, awap.droughts_120pc_2med_intensity)
-    ds_sig['droughts_120pc_2med_severity'] = kstest_apply(ds_model.droughts_120pc_2med_severity, awap.droughts_120pc_2med_severity)
-
-    ds_sig['droughts_220pc_1med'] = kstest_apply(ds_model.droughts_220pc_1med, awap.droughts_220pc_1med)
-    ds_sig['droughts_220pc_1med_intensity'] = kstest_apply(ds_model.droughts_220pc_1med_intensity, awap.droughts_220pc_1med_intensity)
-    ds_sig['droughts_220pc_1med_severity'] = kstest_apply(ds_model.droughts_220pc_1med_severity, awap.droughts_220pc_1med_severity)
-
-    return ds_sig
-
-# --- mannwhitneyu
-
-def check(list):
-    # check if elements in list are identical
-    return all(i == list[0] for i in list)
-
-def mannwhitneyu(x,y):
-    # drop nans
-    xx = x[~np.isnan(x)]
-    yy = y[~np.isnan(y)]
-    # check if array is 0 len
-    if (len(xx) == 0) and (len(yy) == 0):
-        # both were full of nans, set output to nan
-        p_value = np.nan
-    elif (len(xx) == 0) or (len(yy) == 0):
-        # one is a nan, try the test. Most likely will fail?
-        # tau, p_value = stats.mannwhitneyu(xx, yy)
-        p_value = np.nan
-    else:
-        # checking if elements in list are identical
-        check_xx = check(xx)
-        check_yy = check(yy)
-
-        if (check_xx == True) and (check_yy == True) and xx[0] == yy[0]:
-            p_value = 1 # identical arrays, accept null
-        else:
-            tau, p_value = stats.mannwhitneyu(xx, yy)
-    return p_value
-
-
-def mannwhitneyu_apply(x,y,dim='year'):
-    # dim name is the name of the dimension we're applying it over
-    return xr.apply_ufunc(mannwhitneyu, x , y, input_core_dims=[[dim], [dim]], vectorize=True,
-        output_dtypes=[float],  join='outer' # join='outer' seems to allow unequal lengths for dims-of-interest
-        )
-
-def get_significance_droughts_mannwhitneyu(ds_model, awap):
-    ds_sig = xr.Dataset()
-
-    ds_sig['droughts_2s2e'] = mannwhitneyu_apply(ds_model.droughts_2s2e, awap.droughts_2s2e)
-    ds_sig['droughts_2s2e_intensity'] = mannwhitneyu_apply(ds_model.droughts_2s2e_intensity, awap.droughts_2s2e_intensity)
-    ds_sig['droughts_2s2e_severity'] = mannwhitneyu_apply(ds_model.droughts_2s2e_severity, awap.droughts_2s2e_severity)
-
-    ds_sig['droughts_median'] = mannwhitneyu_apply(ds_model.droughts_median, awap.droughts_median)
-    ds_sig['droughts_median_intensity'] = mannwhitneyu_apply(ds_model.droughts_median_intensity, awap.droughts_median_intensity)
-    ds_sig['droughts_median_severity'] = mannwhitneyu_apply(ds_model.droughts_median_severity, awap.droughts_median_severity)
-
-    ds_sig['droughts_20perc'] = mannwhitneyu_apply(ds_model.droughts_20perc, awap.droughts_20perc)
-    ds_sig['droughts_20perc_intensity'] = mannwhitneyu_apply(ds_model.droughts_20perc_intensity, awap.droughts_20perc_intensity)
-    ds_sig['droughts_20perc_severity'] = mannwhitneyu_apply(ds_model.droughts_20perc_severity, awap.droughts_20perc_severity)
-
-    ds_sig['droughts_120pc_2med'] = mannwhitneyu_apply(ds_model.droughts_120pc_2med, awap.droughts_120pc_2med)
-    ds_sig['droughts_120pc_2med_intensity'] = mannwhitneyu_apply(ds_model.droughts_120pc_2med_intensity, awap.droughts_120pc_2med_intensity)
-    ds_sig['droughts_120pc_2med_severity'] = mannwhitneyu_apply(ds_model.droughts_120pc_2med_severity, awap.droughts_120pc_2med_severity)
-
-    ds_sig['droughts_220pc_1med'] = mannwhitneyu_apply(ds_model.droughts_220pc_1med, awap.droughts_220pc_1med)
-    ds_sig['droughts_220pc_1med_intensity'] = mannwhitneyu_apply(ds_model.droughts_220pc_1med_intensity, awap.droughts_220pc_1med_intensity)
-    ds_sig['droughts_220pc_1med_severity'] = mannwhitneyu_apply(ds_model.droughts_220pc_1med_severity, awap.droughts_220pc_1med_severity)
-
-    return ds_sig
-
-# ---------------------
-# wilcoxon rank sum
-def ranksums(x,y):
-    # drop nans
-    xx = x[~np.isnan(x)]
-    yy = y[~np.isnan(y)]
-    # check if array is 0 len
-    if (len(xx) == 0) and (len(yy) == 0):
-        # both were full of nans, set output to nan
-        p_value = np.nan
-    elif (len(xx) == 0) or (len(yy) == 0):
-        # one is a nan, try the test. Most likely will fail?
-        tau, p_value = stats.ranksums(xx, yy)
-    else:
-        # arrays have values in them, run test
-        tau, p_value = stats.ranksums(xx, yy)
-    return p_value
-
-def ranksums_apply(x,y,dim='year'):
-    # dim name is the name of the dimension we're applying it over
-    return xr.apply_ufunc(ranksums, x , y, input_core_dims=[[dim], [dim]], vectorize=True,
-        output_dtypes=[float],  join='outer' # join='outer' seems to allow unequal lengths for dims-of-interest
-        )
-
-def get_significance_droughts_ranksums(ds_model, awap):
-    ds_sig = xr.Dataset()
-
-    ds_sig['droughts_2s2e'] = ranksums_apply(ds_model.droughts_2s2e, awap.droughts_2s2e)
-    ds_sig['droughts_2s2e_intensity'] = ranksums_apply(ds_model.droughts_2s2e_intensity, awap.droughts_2s2e_intensity)
-    ds_sig['droughts_2s2e_severity'] = ranksums_apply(ds_model.droughts_2s2e_severity, awap.droughts_2s2e_severity)
-
-    ds_sig['droughts_median'] = ranksums_apply(ds_model.droughts_median, awap.droughts_median)
-    ds_sig['droughts_median_intensity'] = ranksums_apply(ds_model.droughts_median_intensity, awap.droughts_median_intensity)
-    ds_sig['droughts_median_severity'] = ranksums_apply(ds_model.droughts_median_severity, awap.droughts_median_severity)
-
-    ds_sig['droughts_20perc'] = ranksums_apply(ds_model.droughts_20perc, awap.droughts_20perc)
-    ds_sig['droughts_20perc_intensity'] = ranksums_apply(ds_model.droughts_20perc_intensity, awap.droughts_20perc_intensity)
-    ds_sig['droughts_20perc_severity'] = ranksums_apply(ds_model.droughts_20perc_severity, awap.droughts_20perc_severity)
-
-    ds_sig['droughts_120pc_2med'] = ranksums_apply(ds_model.droughts_120pc_2med, awap.droughts_120pc_2med)
-    ds_sig['droughts_120pc_2med_intensity'] = ranksums_apply(ds_model.droughts_120pc_2med_intensity, awap.droughts_120pc_2med_intensity)
-    ds_sig['droughts_120pc_2med_severity'] = ranksums_apply(ds_model.droughts_120pc_2med_severity, awap.droughts_120pc_2med_severity)
-
-    ds_sig['droughts_220pc_1med'] = ranksums_apply(ds_model.droughts_220pc_1med, awap.droughts_220pc_1med)
-    ds_sig['droughts_220pc_1med_intensity'] = ranksums_apply(ds_model.droughts_220pc_1med_intensity, awap.droughts_220pc_1med_intensity)
-    ds_sig['droughts_220pc_1med_severity'] = ranksums_apply(ds_model.droughts_220pc_1med_severity, awap.droughts_220pc_1med_severity)
-
-    return ds_sig
-# ---------------------
-# wilcoxon - this isn't used but keeping just in case
-def wilcoxon(x,y):
-    # drop nans
-    xx = x[~np.isnan(x)]
-    yy = y[~np.isnan(y)]
-
-    # check if array is 0 len
-    if (len(xx) == 0) and (len(yy) == 0):
-        # both were full of nans, set output to nan
-        p_value = np.nan
-    elif (len(xx) == 0) or (len(yy) == 0):
-        # one is a nan, try the test. Most likely will fail?
-        tau, p_value = stats.wilcoxon(xx, yy)
-    else:
-        # arrays have values in them, run test
-        tau, p_value = stats.wilcoxon(xx, yy)
-    return p_value
-
-def wilcoxon_apply(x,y,dim='year'):
-    # dim name is the name of the dimension we're applying it over
-    return xr.apply_ufunc(wilcoxon, x , y, input_core_dims=[[dim], [dim]], vectorize=True,
-        output_dtypes=[float],  join='outer' # join='outer' seems to allow unequal lengths for dims-of-interest
-        )
-
-def get_significance_droughts_wilcoxon(ds_model, awap):
-    ds_sig = xr.Dataset()
-
-    ds_sig['droughts_2s2e'] = wilcoxon_apply(ds_model.droughts_2s2e, awap.droughts_2s2e)
-    ds_sig['droughts_2s2e_intensity'] = wilcoxon_apply(ds_model.droughts_2s2e_intensity, awap.droughts_2s2e_intensity)
-    ds_sig['droughts_2s2e_severity'] = wilcoxon_apply(ds_model.droughts_2s2e_severity, awap.droughts_2s2e_severity)
-
-    ds_sig['droughts_median'] = wilcoxon_apply(ds_model.droughts_median, awap.droughts_median)
-    ds_sig['droughts_median_intensity'] = wilcoxon_apply(ds_model.droughts_median_intensity, awap.droughts_median_intensity)
-    ds_sig['droughts_median_severity'] = wilcoxon_apply(ds_model.droughts_median_severity, awap.droughts_median_severity)
-
-    ds_sig['droughts_20perc'] = wilcoxon_apply(ds_model.droughts_20perc, awap.droughts_20perc)
-    ds_sig['droughts_20perc_intensity'] = wilcoxon_apply(ds_model.droughts_20perc_intensity, awap.droughts_20perc_intensity)
-    ds_sig['droughts_20perc_severity'] = wilcoxon_apply(ds_model.droughts_20perc_severity, awap.droughts_20perc_severity)
-
-    ds_sig['droughts_120pc_2med'] = wilcoxon_apply(ds_model.droughts_120pc_2med, awap.droughts_120pc_2med)
-    ds_sig['droughts_120pc_2med_intensity'] = wilcoxon_apply(ds_model.droughts_120pc_2med_intensity, awap.droughts_120pc_2med_intensity)
-    ds_sig['droughts_120pc_2med_severity'] = wilcoxon_apply(ds_model.droughts_120pc_2med_severity, awap.droughts_120pc_2med_severity)
-
-    ds_sig['droughts_220pc_1med'] = wilcoxon_apply(ds_model.droughts_220pc_1med, awap.droughts_220pc_1med)
-    ds_sig['droughts_220pc_1med_intensity'] = wilcoxon_apply(ds_model.droughts_220pc_1med_intensity, awap.droughts_220pc_1med_intensity)
-    ds_sig['droughts_220pc_1med_severity'] = wilcoxon_apply(ds_model.droughts_220pc_1med_severity, awap.droughts_220pc_1med_severity)
-
-    return ds_sig
 
 # %% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Check if output directory exists, otherwise make it.
@@ -740,18 +514,18 @@ if not os.path.exists('%s/sig_tests' % lm_output_dir):
 if process_cesm_fullforcing_files is True:
     print('Processing CESM-LME full forcing files')
     # # # ---------------------------------
-    # print('... importing CESM-LME files')
-    # ff1_precip_annual = import_cesmlme(filepath, '001')
-    # ff1_precip_hist_annual , ff1_precip_lm_annual  = process_cesm_files(ff1_precip_annual, 'cesmlme-ff1', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    print('... importing CESM-LME files')
+    ff1_precip_annual = import_cesmlme(filepath, '001')
+    ff1_precip_hist_annual , ff1_precip_lm_annual  = process_cesm_files(ff1_precip_annual, 'cesmlme-ff1', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
 
-    # ff2_precip_annual = import_cesmlme(filepath, '002')
-    # ff2_precip_hist_annual , ff2_precip_lm_annual  = process_cesm_files(ff2_precip_annual, 'cesmlme-ff2', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff2_precip_annual = import_cesmlme(filepath, '002')
+    ff2_precip_hist_annual , ff2_precip_lm_annual  = process_cesm_files(ff2_precip_annual, 'cesmlme-ff2', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
 
-    # ff3_precip_annual = import_cesmlme(filepath, '003')
-    # ff3_precip_hist_annual , ff3_precip_lm_annual  = process_cesm_files(ff3_precip_annual, 'cesmlme-ff3', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff3_precip_annual = import_cesmlme(filepath, '003')
+    ff3_precip_hist_annual , ff3_precip_lm_annual  = process_cesm_files(ff3_precip_annual, 'cesmlme-ff3', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
 
-    # ff4_precip_annual = import_cesmlme(filepath, '004')
-    # ff4_precip_hist_annual , ff4_precip_lm_annual  = process_cesm_files(ff4_precip_annual, 'cesmlme-ff4', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
+    ff4_precip_annual = import_cesmlme(filepath, '004')
+    ff4_precip_hist_annual , ff4_precip_lm_annual  = process_cesm_files(ff4_precip_annual, 'cesmlme-ff4', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
 
     ff5_precip_annual = import_cesmlme(filepath, '005')
     ff5_precip_hist_annual , ff5_precip_lm_annual  = process_cesm_files(ff5_precip_annual, 'cesmlme-ff5', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
@@ -946,7 +720,6 @@ if process_all_pmip3_files is True:
     mri_precip_hist_annual       , mri_precip_lm_annual        = process_pmip3_files(mri_pr, 'mri', historical_year, hist_output_dir, lm_threshold_startyear, lm_threshold_endyear, lm_output_dir)
 
     print('... Finished processing PMIP3 files!')
-
 else:
     print('... Skipping initial processing of PMIP3 files')
 
@@ -1224,7 +997,7 @@ if subset_lme_ff_hist_files_to_Aus_only is True:
     
     # ensemble mean
     ff_all_precip_hist_annual_aus = get_aus(ff_all_precip_hist_annual)
-    save_netcdf_compression(ff_all_precip_hist_annual_aus, hist_output_dir + '/aus', 'ff_all_precip_hist_annual_aus')
+    save_netcdf_compression(ff_all_precip_hist_annual_aus, hist_output_dir + '/aus', 'cesmlme-ff_all_precip_hist_annual_aus')
 else:
     pass
 
