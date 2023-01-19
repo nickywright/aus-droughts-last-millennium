@@ -420,14 +420,14 @@ def import_control_variable_cam(filepath, variable):
 
         # fix times for part 1
         new_days_since_p1 = ds_precc.time_bnds.values[:,0] + 15 # use time bounds instead. add 15 to get middle of month
-        attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
+        attrs = {'units': 'days since 651-01-01 00:00:00', 'calendar': '365_day'}
         dates = xr.Dataset({'time': ('time', new_days_since_p1, attrs)})
         dates = xr.decode_cf(dates)
-        ds_precc.update({'time':('time', dates['time'], attrs)})
+        ds_precc['time'] = dates['time']
         
         # fix times for part 1
         new_days_since_p1 = ds_precl.time_bnds.values[:,0] + 15 # use time bounds instead. add 15 to get middle of month
-        attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
+        attrs = {'units': 'days since 651-01-01 00:00:00', 'calendar': '365_day'}
         dates = xr.Dataset({'time': ('time', new_days_since_p1, attrs)})
         dates = xr.decode_cf(dates)
         # ds_precl.update({'time':('time', dates['time'], attrs)})
@@ -608,7 +608,202 @@ def import_control_variable_pop(filepath, variable):
         ds = ds.sel(z_t=ds.z_t.values[0])
     
     return ds
+
+
+def import_single_forcing_variable_cam(filepath, forcing_type, ensemble_number, variable):
+    """
+    Import single forcing CAM (atmosphere) files using xarray.
+    Here we specify the filepath, ensemble_number of interest, and the variable.
+    The function will remove all other data variables and coordinates except the variable we're interested in.
+
+    """
+    print('...importing %s from %s ensemble member %s' % (variable, forcing_type, ensemble_number))
+    if forcing_type == 'OZONE_AER':
+        # ozone only exists from 1850 onwards
+        filename = '%s/b.e11.BLMTRC5CN.f19_g16.%s.%s.cam.h0.%s.18*.nc' % (filepath, forcing_type, ensemble_number, variable)
+        ds_cam = xr.open_mfdataset(filename, decode_times=False, chunks={'time': 100}, combine='by_coords')
+
+        new_days_since_p2 = ds_cam.time_bnds.values[:,0] + 15 + (365*1000) # use time bounds instead. add 15 to get middle of month. change to be since 850
+        attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
+        dates = xr.Dataset({'time': ('time', new_days_since_p2, attrs)})
+        dates = xr.decode_cf(dates)
+        # ds_p2.update({'time':('time', dates['time'], attrs)})
+        ds_cam['time'] = dates['time']
+
+    else:
+        # Import any other ensemble member
+        filename_p1 = '%s/b.e11.BLMTRC5CN.f19_g16.%s.%s.cam.h0.%s.08*.nc' % (filepath, forcing_type, ensemble_number, variable)
+        filename_p2 = '%s/b.e11.BLMTRC5CN.f19_g16.%s.%s.cam.h0.%s.1*.nc' % (filepath, forcing_type, ensemble_number, variable)
+        ds_p1 = xr.open_mfdataset(filename_p1, decode_times=False, chunks={'time': 100}, combine='by_coords')
+        ds_p2 = xr.open_mfdataset(filename_p2, decode_times=False, chunks={'time': 100}, combine='by_coords')
+
+        # fix times for part 1
+        new_days_since_p1 = ds_p1.time_bnds.values[:,0] + 15 # use time bounds instead. add 15 to get middle of month
+        attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
+        dates = xr.Dataset({'time': ('time', new_days_since_p1, attrs)})
+        dates = xr.decode_cf(dates)
+        # ds_p1.update({'time':('time', dates['time'], attrs)})
+        ds_p1['time'] = dates['time']
+
+        # fix times for part 2
+        new_days_since_p2 = ds_p2.time_bnds.values[:,0] + 15 # use time bounds instead. add 15 to get middle of month. change to be since 850
+        attrs = {'units': 'days since 850-01-01 00:00:00', 'calendar': '365_day'}
+        dates = xr.Dataset({'time': ('time', new_days_since_p2, attrs)})
+        dates = xr.decode_cf(dates)
+        # ds_p2.update({'time':('time', dates['time'], attrs)})
+        ds_p2['time'] = dates['time']
+        ds_cam = xr.concat([ds_p1, ds_p2], dim='time')
     
+    # just in case - re-do time variable so it's all in the same format
+    # (sometimes, part would be as datetime and some as cftime...)
+    time_num = ds_cam.time.values
+    new_time3 = cftime.date2num(time_num, 'days since 850-01-01 00:00:00',  calendar='365_day')
+    dates = xr.Dataset({'time': ('time', new_time3, attrs)})
+    dates = xr.decode_cf(dates)
+    # ds_cam.update({'time':('time', dates['time'], attrs)})
+    ds_cam['time'] = dates['time']
+
+    # get rid of unneeded variables
+    datavars = ds_cam.data_vars
+    datavars_to_remove = []
+    for i in datavars:
+        if i == variable: pass
+        else: datavars_to_remove.append(i)
+    ds_cam = ds_cam.drop(datavars_to_remove)
+
+    # get rid of unneeded coordinates
+    coords = ds_cam.coords
+    coords_to_remove = []
+    for i in coords:
+        if i == 'lat': pass
+        elif i == 'lon': pass
+        elif i == 'time': pass
+        else: coords_to_remove.append(i)
+    ds_cam = ds_cam.drop(coords_to_remove)
+    
+    return ds_cam
+    
+def import_single_forcing_variable_pop(filepath, forcing_type, ensemble_number, variable):
+    """ 
+    Import single forcing POP (ocean) files using xarray. 
+    Here we specify the filepath, ensemble number of interest, and the variable.
+    The function will remove all other data variables and coordinates except the variable we're interested in. 
+    
+    The ensemble member should be in a 3-digit format
+    NOTE: this has not yet been tested
+    """
+    ds = xr.open_mfdataset(filepath + 'b.e11.BLMTRC5CN.f19_g16.' + forcing_type + '.' + ensemble_number 
+                               + '.pop.h.*.nc', decode_times=False, chunks={'time': 10}, combine='by_coords')
+
+    if variable == 'D20':
+        # clean up ds_D20
+        ds = ds.set_coords(['TLAT', 'TLONG', 'ULAT', 'ULONG'])
+        # rename into lower case
+        ds = ds.rename({'TIME': 'time', 'TIME_bnds': 'time_bound', 'NLAT': 'nlat', 'NLON': 'nlon', 'bnds':'d2'})
+        # get rid of time dimension for lats/lons - not sure how it got there
+        ds['TLAT'] = ds['TLAT'].isel(time=0)
+        ds['TLONG'] = ds['TLONG'].isel(time=0)
+        ds['ULAT'] = ds['ULAT'].isel(time=0)
+        ds['ULONG'] = ds['ULONG'].isel(time=0)
+        fix_times_from_yr0(ds)
+        ds = ds.drop(('time_bound'))
+        del ds['D20'].attrs['coordinates']  # del this attribute, otherwise it will cause a problem later
+        ds['D20'] = ds.D20.astype('float32')  # convert from float64 to float 32
+    else:
+        fix_times_from_yr0(ds)
+    
+    # get rid of unneeded variables
+    datavars = ds.data_vars
+    datavars_to_remove = []
+    for i in datavars:
+        if i == variable: pass
+        elif i == 'TAREA': pass
+        else: datavars_to_remove.append(i)
+    ds = ds.drop(datavars_to_remove)
+
+    # get rid of unneeded coordinates
+    coords = ds.coords
+    coords_to_remove = []
+    for i in coords:
+        if i == 'nlat': pass
+        elif i == 'nlon': pass
+        elif i == 'TLAT': pass
+        elif i == 'TLONG': pass
+        elif i == 'time': pass
+        else: coords_to_remove.append(i)
+    ds = ds.drop(coords_to_remove)
+    
+    # set TAREA as a coordinate
+    ds['TAREA'] = ds['TAREA'].isel(time=0)
+    ds = ds.set_coords(['TAREA'])
+    
+    # get rid of z_t
+    if variable == 'SST':
+        ds = ds.sel(z_t=0)
+        
+    return ds
+
+def import_single_forcing_variable_pop_ozone(filepath, ensemble_number, variable):
+    """ 
+    Import single forcing POP (ocean) files using xarray. 
+    Here we specify the filepath, ensemble number of interest, and the variable.
+    The function will remove all other data variables and coordinates except the variable we're interested in. 
+    
+    The ensemble member should be in a 3-digit format
+    NOTE: this has not yet been tested
+    """
+    ds = xr.open_dataset(filepath + 'b.e11.BLMTRC5CN.f19_g16.OZONE_AER.' + ensemble_number 
+                               + '.pop.h.' + variable + '.185001-200512.nc', decode_times=False, chunks={'time': 10})
+
+    if variable == 'D20':
+        # clean up ds_D20
+        ds = ds.set_coords(['TLAT', 'TLONG', 'ULAT', 'ULONG'])
+        # rename into lower case
+        ds = ds.rename({'TIME': 'time', 'TIME_bnds': 'time_bound', 'NLAT': 'nlat', 'NLON': 'nlon', 'bnds':'d2'})
+        # get rid of time dimension for lats/lons - not sure how it got there
+        ds['TLAT'] = ds['TLAT'].isel(time=0)
+        ds['TLONG'] = ds['TLONG'].isel(time=0)
+        ds['ULAT'] = ds['ULAT'].isel(time=0)
+        ds['ULONG'] = ds['ULONG'].isel(time=0)
+        fix_times_from_yr0(ds)
+        ds = ds.drop(('time_bound'))
+        del ds['D20'].attrs['coordinates']  # del this attribute, otherwise it will cause a problem later
+        ds['D20'] = ds.D20.astype('float32')  # convert from float64 to float 32
+    else:
+        fix_times_from_yr0(ds)
+    
+    # get rid of unneeded variables
+    datavars = ds.data_vars
+    datavars_to_remove = []
+    for i in datavars:
+        if i == variable: pass
+        elif i == 'TAREA': pass
+        else: datavars_to_remove.append(i)
+    ds = ds.drop(datavars_to_remove)
+
+    # get rid of unneeded coordinates
+    coords = ds.coords
+    coords_to_remove = []
+    for i in coords:
+        if i == 'nlat': pass
+        elif i == 'nlon': pass
+        elif i == 'TLAT': pass
+        elif i == 'TLONG': pass
+        elif i == 'time': pass
+        else: coords_to_remove.append(i)
+    ds = ds.drop(coords_to_remove)
+    
+    # set TAREA as a coordinate
+    # ds['TAREA'] = ds['TAREA'].isel(time=0)
+    # ds = ds.set_coords(['TAREA'])
+    
+    # get rid of z_t
+    if variable == 'SST':
+        ds = ds.sel(z_t=0)
+        
+    return ds
+
+
 # -----------------------------------------------------------------------------
 # plotting helpers
 # -----------------------------------------------------------------------------
