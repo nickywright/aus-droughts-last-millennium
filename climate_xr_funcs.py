@@ -116,7 +116,7 @@ def get_dpm(ds, calendar='365_day'):
     Return an array of days per month corresponding to the months provided in `months`
     This is useful for calculating annual means, taking into account the weight of each month
     """
-    month_length = np.zeros(len(ds.time), dtype=np.int)
+    month_length = np.zeros(len(ds.time), dtype=int)
     cal_days = dpm[calendar]
 
     for i, (month, year) in enumerate(zip(ds['time.month'].values, ds['time.year'].values)):
