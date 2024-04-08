@@ -1,4 +1,4 @@
-# aus-droughts-past-millennium
+# aus-droughts-last-millennium
 
 Scripts for analysing multi-year drought metrics in Australia in last millennium models. 
 
@@ -6,7 +6,7 @@ Scripts for analysing multi-year drought metrics in Australia in last millennium
 Questions?? Contact <nicky.wright@sydney.edu.au> and/or <georgina.falster@anu.edu.au>
 
 ## Citation
-Falster, G.M., Wright, N.M., Abram, N.J., Ukkola, A.M., and Henley, B.J. 2024, Potential for historically unprecedented Australian droughts from natural variability and climate change, *Hydrology and Earth System Science*
+Falster, G. M., Wright, N. M., Abram, N. J., Ukkola, A. M., and Henley, B. J., 2024, Potential for historically unprecedented Australian droughts from natural variability and climate change, *Hydrology and Earth System Sciences*, 28, 1383–1401, https://doi.org/10.5194/hess-28-1383-2024.
 
 
 ## Files contained in this repository:
